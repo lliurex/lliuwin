@@ -1,9 +1,11 @@
-# WubiUEFI
+# LLiuWin
 
 
 ## Introduction
 
-Wubi is the Windows Ubuntu Installer. Wubi installs Ubuntu inside a file within a windows partition, and thus it does not require CD burning or dedicated partitions, yet the installation is a dual boot setup identical to a normal installation.
+Forked from wubiefi.
+
+LliuWin is the Windows Ubuntu Installer. LliuWin installs LliureX inside a file within a windows partition, and thus it does not require CD burning or dedicated partitions, yet the installation is a dual boot setup identical to a normal installation.
 
 For more information see: https://github.com/hakuna-m/wubiuefi/wiki
 
@@ -12,9 +14,9 @@ For more information see: https://github.com/hakuna-m/wubiuefi/wiki
 
 | Make Command         | Description                                                                                                                                                                                                               |
 |----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `make`               | Builds wubi.exe, note that the first time you run it, you will have to install python inside of Wine, this is performed automatically, just confirm all the default choices in the installation screens that will appear. |
+| `make`               | Builds lliuwin.exe, note that the first time you run it, you will have to install python inside of Wine, this is performed automatically, just confirm all the default choices in the installation screens that will appear. |
 | `make runpy`         | Runs wubi under wine directly from source                                                                                                                                                                                 |
-| `make runbin`        | Builds wubi and runs the packaged binary under wine                                                                                                                                                                       |
+| `make runbin`        | Builds lliuwin and runs the packaged binary under wine                                                                                                                                                                       |
 | `make wubizip`       | Creates a special zip file conatining python.exe and non byte compiled python files that is convenient for debugging purposes. Inside of Windows, unzip the archive, then run `python.exe main.py --verbose`              |
 | `make pot`           | Generates a gettext template (`/po/wubi.pot`)                                                                                                                                                                             |
 | `make check_wine`    | Creates the Wine environment if it doesn't exist.                                                                                                                                                                         |
@@ -34,15 +36,15 @@ For more information see: https://github.com/hakuna-m/wubiuefi/wiki
 * `/po` : Translations
 * `/bin` : Other binary files required at runtime (will be compiled at a later stage)
 
-## Wubi tasks
+## Lliuwin tasks
 
-Wubi performs the following tasks:
+Lliuwin performs the following tasks:
 
 * Fetches information about the running system which will be used during installation
 * Checks that the minimum installation requirements are met
 * Retrieves required user information via a GUI
 * Looks for available local CDs and ISO files
-* Downloads the ISO if one is required, using Bittorrent and an HTTP download manager
+* Downloads the ISO if one is required, using Bittorrent and an HTTP download manager (not supoported by lliuwin)
 * Checks the ISO/CD MD5 sums and the MD5 signature
 * Extracts the kernel and initrd from the ISO
 * Adds a new boot entry to the existing windows bootloader
