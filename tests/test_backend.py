@@ -15,12 +15,12 @@ class BackendTests(unittest.TestCase):
         # To get things like info.locale set.
         w.parse_commandline_arguments()
         self.back = backend.WindowsBackend(w)
-        w.info.original_exe = os.path.join(os.getcwd(), 'build', 'wubi.exe')
+        w.info.original_exe = os.path.join(os.getcwd(), 'build', 'lliuwin.exe')
 
         # Data
         self.uninstall_keys = [
             ('HKEY_LOCAL_MACHINE', 'registry-key', 'UninstallString',
-             'Z:\\tmp\\uninstall-wubi.exe'),
+             'Z:\\tmp\\uninstall-lliuwin.exe'),
             ('HKEY_LOCAL_MACHINE', 'registry-key', 'InstallationDir', '/tmp'),
             ('HKEY_LOCAL_MACHINE', 'registry-key', 'DisplayName', 'Ubuntu'),
             ('HKEY_LOCAL_MACHINE', 'registry-key', 'DisplayIcon',

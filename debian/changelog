@@ -1,3 +1,8 @@
+lliuwin (19.04r001) bionic; urgency=low
+  [ LliureX fork ]
+
+  * Works with LliureX 16 and 19
+
 wubi (20.04r339) focal; urgency=low
 
   [Hakuna Matata]

@@ -180,10 +180,13 @@ class InstallationPage(Page):
             "header.bmp")
 
         #navigation
-        self.insert_navigation(_("Accessibility"), _("Install"), _("Cancel"), default=2)
-        self.navigation.button3.on_click = self.on_cancel
-        self.navigation.button2.on_click = self.on_install
-        self.navigation.button1.on_click = self.on_accessibility
+#        self.insert_navigation(_("Accessibility"), _("Install"), _("Cancel"), default=2)
+#        self.navigation.button3.on_click = self.on_cancel
+#        self.navigation.button2.on_click = self.on_install
+#        self.navigation.button1.on_click = self.on_accessibility
+        self.insert_navigation(_("Install"), _("Cancel"), default=1)
+        self.navigation.button2.on_click = self.on_cancel
+        self.navigation.button1.on_click = self.on_install
 
         #Main control container
         self.insert_main()

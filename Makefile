@@ -1,6 +1,6 @@
 export SHELL = sh
-PACKAGE = wubi
-ICON = data/images/Wubi.ico
+PACKAGE = lliuwin
+ICON = data/images/LliureX.ico
 VERSION = $(shell head -n 1 debian/changelog | sed -e "s/^$(PACKAGE) (\(.*\)).*/\1/g" | cut -d r -f 1)
 REVISION = $(shell head -n 1 debian/changelog | sed -e "s/^$(PACKAGE) (\(.*\)).*/\1/g" | cut -d r -f 2)
 COPYRIGHTYEAR = 2009
@@ -9,19 +9,19 @@ EMAIL = agostino.russo@gmail.com
 
 all: build check
 
-build: wubi
+build: lliuwin
 
-wubi: wubi-pre-build
+lliuwin: lliuwin-pre-build
 	PYTHONPATH=src tools/pywine -OO src/pypack/pypack --verbose --bytecompile --outputdir=build/wubi src/main.py data build/bin build/version.py build/winboot build/translations
 	PYTHONPATH=src tools/pywine -OO build/pylauncher/pack.py build/wubi
-	mv build/application.exe build/wubi.exe
+	mv build/application.exe build/lliuwin.exe
 
-wubizip: wubi-pre-build
+lliuwinzip: lliuwin-pre-build
 	PYTHONPATH=src tools/pywine src/pypack/pypack --verbose --outputdir=build/wubi src/main.py data build/bin build/version.py build/winboot build/translations
 	cp wine/drive_c/Python27/python.exe build/wubi #TBD
 	cd build; zip -r wubi.zip wubi
 
-wubi-pre-build: check_wine check_winboot pylauncher winboot2 src/main.py src/wubi/*.py cpuid version.py translations
+lliuwin-pre-build: check_wine check_winboot pylauncher winboot2 src/main.py src/wubi/*.py cpuid version.py translations
 	rm -rf build/wubi
 	rm -rf build/bin
 	cp -a blobs build/bin
@@ -42,7 +42,7 @@ update-po: pot
 	for i in po/*.po ;\
 	do \
 	mv $$i $${i}.old ; \
-	(msgmerge $${i}.old po/wubi.pot | msgattrib --no-obsolete > $$i) ; \
+	(msgmerge $${i}.old po/lliuwin.pot | msgattrib --no-obsolete > $$i) ; \
 	rm $${i}.old ; \
 	done
 
@@ -122,10 +122,10 @@ grubutil: src/grubutil/grubinst/*
 	mkdir -p build/7z
 	cp -rf src/7z build
 
-runbin: wubi
+runbin: lliuwin
 	rm -rf build/test
 	mkdir build/test
-	cd build/test; ../../tools/wine ../wubi.exe --test
+	cd build/test; ../../tools/wine ../lliuwin.exe --test
 
 check_wine: tools/check_wine
 	tools/check_wine
@@ -136,7 +136,7 @@ check_winboot: tools/check_winboot
 unittest:
 	tools/pywine tools/test
 
-check: wubi
+check: lliuwin
 	tests/run
 
 runpy:
@@ -155,5 +155,5 @@ distclean: clean
 	rm -rf data/custom-installation/packages
 	rm -rf shim
 
-.PHONY: all build test wubi wubizip wubi-pre-build pot runpy runbin check_wine check_winboot unittest
+.PHONY: all build test lliuwin lliuwinzip lliuwin-pre-build pot runpy runbin check_wine check_winboot unittest
 	7z translations version.py pylauncher winboot winboot2 grubutil grub4dos clean distclean

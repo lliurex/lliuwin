@@ -138,8 +138,8 @@ if search -s -f -n $loop_file; then
                     set show_panic_message=false
                 fi
 	else
-		if search -s -f -n /ubuntu/install/wubildr-disk.cfg; then
-			if configfile /ubuntu/install/wubildr-disk.cfg; then
+		if search -s -f -n /lliurex/install/wubildr-disk.cfg; then
+			if configfile /lliurex/install/wubildr-disk.cfg; then
 				set show_panic_message=false
 			fi
 		fi
@@ -147,7 +147,7 @@ if search -s -f -n $loop_file; then
     fi
 fi
 if [ \${show_panic_message} = true ]; then
-    echo "It is not possible to boot from the Ubuntu image."
+    echo "It is not possible to boot from the LliureX image."
     echo "The Windows partition might be corrupted."
     echo "Please reboot into Windows and run: chkdsk /r"
     echo "Then try again."

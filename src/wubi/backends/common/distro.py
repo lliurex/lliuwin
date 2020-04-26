@@ -25,7 +25,9 @@ import re
 
 log = logging.getLogger('Distro')
 disk_info_re = '''(?P<name>[\w\s-]+) (?P<version>[\w.]+)(?: LTS)?(?: (?:\")?(?P<codename>[\w\s-]+)(?:\")?)? - (?P<subversion>[\D]+)? (?P<arch>i386|amd64)(?:[\D]+)?(?P<build>[\d:.-]+)?'''
+disk_non_standard_info_re = '''(?P<name>[\w\s-]+) (?: LTS)?(?: (?:\")?(?P<codename>[\w\s-]+)(?:\")?)? - (?P<subversion>[\D]+)? (?P<arch>i386|amd64)(?:[\D]+)?(?P<build>[\d:.-]+)?'''
 disk_info_re = re.compile(disk_info_re)
+disk_non_standard_info_re = re.compile(disk_non_standard_info_re)
 
 class Distro(object):
 
@@ -187,13 +189,22 @@ class Distro(object):
         Ubuntu Split Name 9.04.1 "Jaunty Jackalope" - Final Release i386 (20090106.2)
         Ubuntu-Studio 12.10 "Quantal Quetzal" - Release amd64 (20121017.1)
         '''
+        orig_info=info
         log.debug("  parsing info from str=%s" % info)
         if not info:
             return
-        info = disk_info_re.match(info)
-        name = info.group('name').replace('-', ' ')
-        version = info.group('version')
-        subversion = info.group('subversion')
-        arch = info.group('arch')
+        info = disk_info_re.match(orig_info)
+        if info:
+            name = info.group('name').replace('-', ' ')
+            version = info.group('version')
+            subversion = info.group('subversion')
+            arch = info.group('arch')
+        else:
+            info = disk_non_standard_info_re.match(orig_info)
+            name = info.group('name').replace('-', ' ')
+            version = "19.04"
+            subversion = info.group('subversion')
+            arch = info.group('arch')
+            
         log.debug("  parsed info=%s" % info.groupdict())
         return name, version, subversion, arch
