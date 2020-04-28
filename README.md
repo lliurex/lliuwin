@@ -5,7 +5,7 @@
 
 Forked from wubiefi.
 
-LliuWin is the Windows Ubuntu Installer. LliuWin installs LliureX inside a file within a windows partition, and thus it does not require CD burning or dedicated partitions, yet the installation is a dual boot setup identical to a normal installation.
+LliuWin is the Windows LliureX Installer. LliuWin installs LliureX inside a file within a windows partition, and thus it does not require CD burning or dedicated partitions, yet the installation is a dual boot setup identical to a normal installation.
 
 For more information see: https://github.com/hakuna-m/wubiuefi/wiki
 
