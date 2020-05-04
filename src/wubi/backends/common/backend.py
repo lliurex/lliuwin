@@ -74,9 +74,11 @@ class Backend(object):
 
     def get_installation_tasklist(self):
         self.cache_cd_path()
-        dimage = self.info.distro.diskimage
+        self.dimage_path = self.info.distro.diskimage
+        self.cache_img_path()
         # don't use diskimage for a FAT32 target directory
-        if dimage and not self.cd_path and not self.iso_path and not self.info.target_drive.is_fat():
+        #if self.dimage_path and not self.cd_path and not self.iso_path and not self.info.target_drive.is_fat():
+        if self.dimage_path and not self.info.target_drive.is_fat():
             tasks = [
             Task(self.select_target_dir,
                  description=_("Selecting the target directory")),
@@ -86,9 +88,11 @@ class Backend(object):
                  description=_("Creating the uninstaller")),
             Task(self.create_preseed_diskimage,
                  description=_("Creating a preseed file")),
+            Task(self.copy_installation_files, description=_("Copying installation files")),
             Task(self.get_diskimage,
                  description=_("Retrieving installation files")),
             Task(self.extract_diskimage, description=_("Extracting")),
+            Task(self.extract_kernel, description=_("Extracting the kernel")),
             Task(self.choose_disk_sizes, description=_("Choosing disk sizes")),
             Task(self.expand_diskimage,
                  description=_("Expanding")),
@@ -96,8 +100,9 @@ class Backend(object):
                  description=_("Creating virtual memory")),
             Task(self.modify_bootloader,
                  description=_("Adding a new bootloader entry")),
-            Task(self.diskimage_bootloader,
-                 description=_("Installing the bootloader")),
+            Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
+#            Task(self.diskimage_bootloader,
+#                 description=_("Installing the bootloader")),
             ]
         else:
             tasks = [
@@ -187,6 +192,7 @@ class Backend(object):
         if not self.info.locale:
             self.info.locale = self.get_locale(self.info.language)
         self.info.total_memory_mb = self.get_total_memory_mb()
+        self.info.dimage_path, self.info.iso_distro = self.find_any_img()
         self.info.iso_path, self.info.iso_distro = self.find_any_iso()
         self.info.cd_path, self.info.cd_distro = self.find_any_cd()
 
@@ -357,6 +363,25 @@ class Backend(object):
         urls.sort(cmp)
         return urls
 
+    def cache_img_path(self):
+        self.dimage_path = None
+        self.dimage_path = self.find_img()
+		#if self.info.cd_distro \
+		#and self.info.distro == self.info.cd_distro \
+		#and self.info.cd_path \
+		#and os.path.isdir(self.info.cd_path):
+		#    self.cd_path = self.info.cd_path
+		#else:
+		#    self.cd_path = self.find_cd()
+
+		#if not self.cd_path:
+		#    if self.info.iso_distro \
+		#    and self.info.distro == self.info.iso_distro \
+		#    and os.path.isfile(self.info.iso_path):
+		#        self.iso_path = self.info.iso_path
+		#    else:
+		#        self.iso_path = self.find_iso()
+    
     def cache_cd_path(self):
         self.iso_path = None
         self.cd_path = None
@@ -391,7 +416,7 @@ class Backend(object):
                 os.mkdir(d)
 
     def download_diskimage(self, diskimage, associated_task=None):
-        proxy = self.info.web_proxy
+        pjajaroxy = self.info.web_proxy
         save_as = join_path(self.info.disks_dir, diskimage.split('/')[-1])
         if os.path.isfile(save_as):
             os.unlink(save_as)
@@ -474,6 +499,7 @@ class Backend(object):
         '''
         Use a local disk image specificed on the command line
         '''
+        log.debug("Searching for image at %s" % self.info.dimage_path)
         if self.info.dimage_path \
         and os.path.exists(self.info.dimage_path):
             #TBD shall we do md5 check? Doesn't work well with daylies
@@ -674,7 +700,7 @@ class Backend(object):
         for k,v in dic.items():
             k = "$(%s)" % k
             template = template.replace(k, v)
-        preseed_file = join_path(self.info.install_dir, "preseed.cfg")
+        preseed_file = join_path(self.info.install_dir, "preseed_llx.cfg")
         write_file(preseed_file, template)
 
         source = join_path(self.info.data_dir, "wubildr-disk.cfg")
@@ -762,16 +788,17 @@ class Backend(object):
             kernel = unix_path(self.info.kernel),
             initrd = unix_path(self.info.initrd),
             rootflags = rootflags,
-            title1 = "Completing the Ubuntu installation.",
-            title2 = "For more installation boot options, press `ESC' now...",
-            normal_mode_title = "Normal mode",
-            pae_mode_title = "PAE mode",
-            safe_graphic_mode_title = "Safe graphic mode",
-            intel_graphics_workarounds_title = "Intel graphics workarounds",
-            nvidia_graphics_workarounds_title = "Nvidia graphics workarounds",
-            acpi_workarounds_title = "ACPI workarounds",
-            verbose_mode_title = "Verbose mode",
-            demo_mode_title =  "Demo mode",
+            title1 = "Booting the LliureX installation.",
+            title2 = "For more boot options, press `ESC' now...",
+            lliurex_mode_title = "LliureX",
+            normal_mode_title = "LliureX Live",
+			#pae_mode_title = "PAE mode",
+			# safe_graphic_mode_title = "Safe graphic mode",
+			#intel_graphics_workarounds_title = "Intel graphics workarounds",
+			#nvidia_graphics_workarounds_title = "Nvidia graphics workarounds",
+			#acpi_workarounds_title = "ACPI workarounds",
+			#verbose_mode_title = "Verbose mode",
+			#demo_mode_title =  "Demo mode",
             )
         content = template
         for k,v in dic.items():
@@ -798,6 +825,17 @@ class Backend(object):
                 cmd.communicate(input='Y%s' % os.linesep)
                 raise errors.WubiCorruptionError
 
+    def find_img(self, associated_task=None):
+        log.debug("Searching for local IMG")
+        for path in self.get_iso_search_paths():
+            log.debug("IMG path: %s"%path)
+            path = join_path(path, '*.img')
+            imgs = glob.glob(path)
+            for img in imgs:
+#                if self.info.distro.is_valid_iso(iso, self.info.check_arch):
+                log.debug("Found local IMG: %s"%img)
+                return img
+
     def find_iso(self, associated_task=None):
         log.debug("Searching for local ISO")
         for path in self.get_iso_search_paths():
@@ -807,6 +845,29 @@ class Backend(object):
                 if self.info.distro.is_valid_iso(iso, self.info.check_arch):
                     return iso
 
+    def find_any_img(self):
+        '''
+        look for local IMGs or pre specified IMG
+        '''
+        #Use pre-specified IMG
+        if self.info.dimage_path \
+        and os.path.exists(self.info.dimage_path):
+            log.debug("Checking pre-specified IMG %s" % self.info.dimage_path)
+            for distro in self.info.distros:
+                #if distro.is_valid_iso(self.info.iso_path, self.info.check_arch):
+                    #self.info.cd_path = None
+                 return self.info.dimage_path, 'LliureX'
+        #Search local ISOs
+        log.debug("Searching for local IMGs")
+        for path in self.get_iso_search_paths():
+            path = join_path(path, '*.img')
+            imgs = glob.glob(path)
+            for img in imgs:
+                #for distro in self.info.distros:
+                    #if distro.is_valid_iso(iso, self.info.check_arch):
+                return img, 'LliureX'
+        return None, None
+    
     def find_any_iso(self):
         '''
         look for local ISOs or pre specified ISO
