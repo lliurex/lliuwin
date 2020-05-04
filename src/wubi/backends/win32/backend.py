@@ -440,6 +440,7 @@ class WindowsBackend(Backend):
         # TODO: try to pipe download stream into this.
         sevenzip = self.info.iso_extractor
         xz = self.dimage_path
+        log.debug("  extracting %s" % (xz))
         tarball = os.path.basename(self.dimage_path).strip('.xz')
         # 7-zip needs 7z.dll to read the xz format.
         dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
@@ -455,6 +456,11 @@ class WindowsBackend(Backend):
         # Only remove downloaded image
         if not self.info.dimage_path:
             os.remove(xz)
+        root = join_path(self.info.disks_dir, 'root.disk')
+        log.debug("%s copying to %s" % (self.dimage_path,root))
+        shutil.copyfile(self.dimage_path, root)
+		#Set custominstall path
+        self.info.custominstall = join_path(self.info.install_dir, 'custom-installation')
 
     def expand_diskimage(self, associated_task=None):
         # TODO: might use -p to get percentage to feed into progress.
@@ -477,18 +483,19 @@ class WindowsBackend(Backend):
         if isdir(src):
             log.debug('Copying %s -> %s' % (src, dest))
             shutil.copytree(src, dest)
-        src = join_path(self.info.disks_dir, 'wubildr')
-        shutil.copyfile(src, join_path(dest, 'wubildr'))
-        # Overwrite the copy that's in root_dir.
-        for drive in self.info.drives:
-            if drive.type not in ('removable', 'hd'):
-                continue
-            dest = join_path(drive.path, 'wubildr')
-            try:
-                shutil.copyfile(src, dest)
-            except: # don't need to worry about failure here
-                pass
-        os.unlink(src)
+        #REM -> No need
+		#src = join_path(self.info.disks_dir, 'wubildr')
+		#shutil.copyfile(src, join_path(dest, 'wubildr'))
+		## Overwrite the copy that's in root_dir.
+		#for drive in self.info.drives:
+		#    if drive.type not in ('removable', 'hd'):
+		#        continue
+		#    dest = join_path(drive.path, 'wubildr')
+		#    try:
+		#        shutil.copyfile(src, dest)
+		#    except: # don't need to worry about failure here
+		#        pass
+		#os.unlink(src)
 
     def get_usb_search_paths(self):
         '''
