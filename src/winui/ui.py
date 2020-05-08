@@ -522,7 +522,7 @@ class ComboBox(Widget):
 
     def clear(self):
         self._send_message(defs.CB_RESETCONTENT, 0, 0)
-
+    
     def on_change(self):
         pass
 

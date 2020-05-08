@@ -143,15 +143,14 @@ class InstallationPage(Page):
         self.on_size_change()
 
     def populate_distro_list(self):
-        if self.info.cd_distro:
-            distros = [self.info.cd_distro.name]
-        elif self.info.iso_distro:
-            distros = [self.info.iso_distro.name]
-        else:
-            distros = []
-            for distro in self.info.distros:
-                if distro.name not in distros:
-                    distros.append(distro.name)
+        distros = []
+		#if self.info.cd_distro:
+		#    distros = [self.info.cd_distro.name]
+		#elif self.info.iso_distro:
+		#    distros = [self.info.iso_distro.name]
+        for distro in self.info.distros:
+            if distro.name not in distros:
+                distros.append(distro.name)
         for distro in distros:
             self.distro_list.add_item(distro)
         self.distro_list.set_value(distros[0])
@@ -167,6 +166,8 @@ class InstallationPage(Page):
             language = self.info.windows_language
         if not language:
             language = lang_country2language.get("en_US")
+        if language=="Catalan":
+            language="Valencian"
         self.language_list.set_value(language)
 
     def on_init(self):
@@ -176,7 +177,8 @@ class InstallationPage(Page):
         #The title and image are overridden in on_distro_change, the following are stubs
         self.insert_header(
             "Installing",
-            _("Please select username and password for the new account"),
+#            _("Please select username and password for the new account"),
+            "",
             "header.bmp")
 
         #navigation
@@ -206,7 +208,7 @@ class InstallationPage(Page):
         self.size_list.on_change = self.on_size_change
 
         picture, label, self.distro_list = self.add_controls_block(
-            self.main, h, h*7,
+            self.main, h*4+w, h*4,
             "desktop.bmp", _("Desktop environment:"), True)
         self.populate_distro_list()
         self.distro_list.on_change = self.on_distro_change
@@ -216,37 +218,36 @@ class InstallationPage(Page):
             "language.bmp", _("Language:"), True)
         self.populate_language_list()
         self.language_list.on_change = self.on_language_change
+#        if self.info.username:
+#            username = self.info.username
+#        else:
+#            username = self.info.host_username
+#        username = re.sub('[^-a-z0-9_]', '', username.strip().lower())
+#        picture, label, combo = self.add_controls_block(
+#            self.main, h*4 + w, h*4,
+#            "user.bmp", _("Username:"), None)
+#        self.username = ui.Edit(
+#            self.main,
+#            h*4 + w + 42, h*4+20, 150, 20,
+#            username, False)
 
-        if self.info.username:
-            username = self.info.username
-        else:
-            username = self.info.host_username
-        username = re.sub('[^-a-z0-9_]', '', username.strip().lower())
-        picture, label, combo = self.add_controls_block(
-            self.main, h*4 + w, h*4,
-            "user.bmp", _("Username:"), None)
-        self.username = ui.Edit(
-            self.main,
-            h*4 + w + 42, h*4+20, 150, 20,
-            username, False)
-
-        picture, label, combo = self.add_controls_block(
-            self.main, h*4 + w, h*7,
-            "lock.bmp", _("Password:"), None)
-        label.move(h*4 + w + 42, h*7 - 24)
-        password = ""
-        if self.info.password:
-            password = self.info.password
-        elif self.info.test:
-            password = "test"
-        self.password1 = ui.PasswordEdit(
-            self.main,
-            h*4 + w + 42, h*7-4, 150, 20,
-            password, False)
-        self.password2 = ui.PasswordEdit(
-            self.main,
-            h*4 + w + 42, h*7+20, 150, 20,
-            password, False)
+#        picture, label, combo = self.add_controls_block(
+#            self.main, h*4 + w, h*7,
+#            "lock.bmp", _("Password:"), None)
+#        label.move(h*4 + w + 42, h*7 - 24)
+#        password = ""
+#        if self.info.password:
+#            password = self.info.password
+#        elif self.info.test:
+#            password = "test"
+#        self.password1 = ui.PasswordEdit(
+#            self.main,
+#            h*4 + w + 42, h*7-4, 150, 20,
+#            password, False)
+#        self.password2 = ui.PasswordEdit(
+#            self.main,
+#            h*4 + w + 42, h*7+20, 150, 20,
+#            password, False)
         self.error_label = ui.Label(
             self.main,
             40, self.main.height - 20, self.main.width - 80, 12,
@@ -264,7 +265,10 @@ class InstallationPage(Page):
     def get_installation_size_mb(self):
         installation_size = self.size_list.get_text()
         #using 1000 as opposed to 1024
-        installation_size = int(installation_size[:-2])*1000
+        try:
+            installation_size = int(installation_size[:-2])*1000
+        except:
+            installation_size=0
         return installation_size
 
     def on_distro_change(self):
@@ -275,6 +279,7 @@ class InstallationPage(Page):
         if not self.info.distro and self.info.arch == 'amd64':
             self.info.distro = self.info.distros_dict.get((distro_name.lower(), 'i386'))
         self.frontend.set_title(_("%s Installer") % self.info.distro.name)
+
         bmp_file = "%s-header.bmp" % self.info.distro.name
         self.header.image.set_image(os.path.join(unicode(str(self.info.image_dir), 'mbcs'), unicode(str(bmp_file), 'mbcs')))
         self.header.title.set_text(_("You are about to install %(distro)s-%(version)s") % dict(distro=self.info.distro.name, version=self.info.version))
@@ -289,6 +294,13 @@ class InstallationPage(Page):
                 else:
                     self.info.skip_memory_check = True
         self.populate_drive_list()
+        if self.info.distro.name=="LliureX-Live":
+            self.size_list_gb = []
+            self.size_list.clear()
+            self.size_list_gb.append("0")
+            self.size_list.add_item(_("Not apply"))
+            self.size_list.set_value(_("Not apply"))
+
 
     def on_language_change(self):
         language = self.language_list.get_text()
@@ -319,28 +331,30 @@ class InstallationPage(Page):
         language = self.language_list.get_text()
         language = language2lang_country.get(language, None)
         locale = lang_country2linux_locale.get(language, self.info.locale)
-        username = self.username.get_text()
-        password1 = self.password1.get_text()
-        password2 = self.password2.get_text()
+        username="lliurex"
+        password1="lliurex"
+#        username = self.username.get_text()
+#        password1 = self.password1.get_text()
+#        password2 = self.password2.get_text()
         error_message = ""
-        if not username:
-            error_message = _("Please enter a valid username.")
-        elif username != username.lower():
-            error_message = _("Please use all lower cases in the username.")
-        elif " " in username:
-            error_message =  _("Please do not use spaces in the username.")
-        elif not re_username_first.match(username):
-            error_message =  _("Your username must start with a lower-case letter.")
-        elif not re_username.match(username):
-            error_message =  _("Your username must contain only lower-case letters, numbers, hyphens, and underscores.")
-        elif username in reserved_usernames:
-            error_message = _("The selected username is reserved, please select a different one.")
-        elif not password1:
-            error_message = _("Please enter a valid password.")
-        elif " " in password1:
-            error_message = _("Please do not use spaces in the password.")
-        elif password1 != password2:
-            error_message = _("Passwords do not match.")
+#        if not username:
+#            error_message = _("Please enter a valid username.")
+#        elif username != username.lower():
+#            error_message = _("Please use all lower cases in the username.")
+#        elif " " in username:
+#            error_message =  _("Please do not use spaces in the username.")
+#        elif not re_username_first.match(username):
+#            error_message =  _("Your username must start with a lower-case letter.")
+#        elif not re_username.match(username):
+#            error_message =  _("Your username must contain only lower-case letters, numbers, hyphens, and underscores.")
+#        elif username in reserved_usernames:
+#            error_message = _("The selected username is reserved, please select a different one.")
+#        elif not password1:
+#            error_message = _("Please enter a valid password.")
+#        elif " " in password1:
+#            error_message = _("Please do not use spaces in the password.")
+#        elif password1 != password2:
+#            error_message = _("Passwords do not match.")
         self.error_label.set_text(error_message)
         if error_message:
             if self.info.non_interactive:

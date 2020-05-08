@@ -76,33 +76,36 @@ class Backend(object):
         self.cache_cd_path()
         self.dimage_path = self.info.distro.diskimage
         self.cache_img_path()
+        self.iso_path = self.info.distro.iso_path
         # don't use diskimage for a FAT32 target directory
         #if self.dimage_path and not self.cd_path and not self.iso_path and not self.info.target_drive.is_fat():
-        if self.dimage_path and not self.info.target_drive.is_fat():
-            tasks = [
-            Task(self.select_target_dir,
-                 description=_("Selecting the target directory")),
-            Task(self.create_dir_structure,
-                 description=_("Creating the directories")),
-            Task(self.create_uninstaller,
-                 description=_("Creating the uninstaller")),
-            Task(self.create_preseed_diskimage,
-                 description=_("Creating a preseed file")),
-            Task(self.copy_installation_files, description=_("Copying installation files")),
-            Task(self.get_diskimage,
-                 description=_("Retrieving installation files")),
-            Task(self.extract_diskimage, description=_("Extracting")),
-            Task(self.extract_kernel, description=_("Extracting the kernel")),
-            Task(self.choose_disk_sizes, description=_("Choosing disk sizes")),
-            Task(self.expand_diskimage,
-                 description=_("Expanding")),
-            Task(self.create_swap_diskimage,
-                 description=_("Creating virtual memory")),
-            Task(self.modify_bootloader,
-                 description=_("Adding a new bootloader entry")),
-            Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
-#            Task(self.diskimage_bootloader,
-#                 description=_("Installing the bootloader")),
+		#Lliurex-Live boots from iso, Lllurex from img
+        if self.info.distro.name=='LliureX':
+            if not self.info.target_drive.is_fat():
+                 tasks = [
+                 Task(self.select_target_dir,
+                      description=_("Selecting the target directory")),
+                 Task(self.create_dir_structure,
+                      description=_("Creating the directories")),
+                 Task(self.create_uninstaller,
+                      description=_("Creating the uninstaller")),
+                 Task(self.create_preseed_diskimage,
+                      description=_("Creating a preseed file")),
+                 Task(self.copy_installation_files, description=_("Copying installation files")),
+                 Task(self.get_diskimage,
+                      description=_("Retrieving installation files")),
+                 Task(self.extract_diskimage, description=_("Extracting")),
+		     	#Task(self.extract_kernel, description=_("Extracting the kernel")),
+                 Task(self.choose_disk_sizes, description=_("Choosing disk sizes")),
+                 Task(self.expand_diskimage,
+                      description=_("Expanding")),
+                 Task(self.create_swap_diskimage,
+                      description=_("Creating virtual memory")),
+                 Task(self.modify_bootloader,
+                      description=_("Adding a new bootloader entry")),
+                 Task(self.modify_grub_configuration, description=_("Setting up installation boot menu")),
+#                 Task(self.diskimage_bootloader,
+#                      description=_("Installing the bootloader")),
             ]
         else:
             tasks = [
@@ -321,31 +324,31 @@ class Backend(object):
         if self.info.skip_md5_check:
             return True
         hashsum = None
-        if not self.info.distro.metalink:
-            get_metalink = associated_task.add_subtask(
-                self.get_metalink, description=_("Downloading information on installation files"))
-            get_metalink()
-            if not self.info.distro.metalink:
-                log.error("ERROR: the metalink file is not available, cannot check the md5 for %s, ignoring" % iso_path)
-                return True
-        for hash in self.info.distro.metalink.files[0].hashes:
-            if hash.type in ['md5','sha1','sha224','sha256','sha384','sha512']:
-                hashsum = hash.hash
-                hash_name = hash.type
-        if not hashsum:
-            log.error("ERROR: Could not find any md5 hash in the metalink for the ISO %s, ignoring" % iso_path)
-            return True
-        hashsum2 = self.info.iso_md5_hashes.get(iso_path, None)
-        if not hashsum2:
-            get_hash = associated_task.add_subtask(
-                get_file_hash,
-                description = _("Checking installation files") )
-            hashsum2 = get_hash(iso_path, hash_name)
-            if not iso_path.startswith(self.info.install_dir):
-                self.info.iso_md5_hashes[iso_path] = hashsum2
-        if hashsum != hashsum2:
-            log.exception("Invalid %s for ISO %s (%s != %s)" % (hash_name, iso_path, hashsum, hashsum2))
-            return False
+#        if not self.info.distro.metalink:
+#            get_metalink = associated_task.add_subtask(
+#                self.get_metalink, description=_("Downloading information on installation files"))
+#            get_metalink()
+#            if not self.info.distro.metalink:
+#                log.error("ERROR: the metalink file is not available, cannot check the md5 for %s, ignoring" % iso_path)
+#                return True
+#        for hash in self.info.distro.metalink.files[0].hashes:
+#            if hash.type in ['md5','sha1','sha224','sha256','sha384','sha512']:
+#                hashsum = hash.hash
+#                hash_name = hash.type
+#        if not hashsum:
+#            log.error("ERROR: Could not find any md5 hash in the metalink for the ISO %s, ignoring" % iso_path)
+#            return True
+#        hashsum2 = self.info.iso_md5_hashes.get(iso_path, None)
+#        if not hashsum2:
+#            get_hash = associated_task.add_subtask(
+#                get_file_hash,
+#                description = _("Checking installation files") )
+#            hashsum2 = get_hash(iso_path, hash_name)
+#            if not iso_path.startswith(self.info.install_dir):
+#                self.info.iso_md5_hashes[iso_path] = hashsum2
+#        if hashsum != hashsum2:
+#            log.exception("Invalid %s for ISO %s (%s != %s)" % (hash_name, iso_path, hashsum, hashsum2))
+#            return False
         return True
 
     def select_mirrors(self, urls):
@@ -415,66 +418,49 @@ class Backend(object):
                 log.debug("Creating dir %s" % d)
                 os.mkdir(d)
 
-    def download_diskimage(self, diskimage, associated_task=None):
-        pjajaroxy = self.info.web_proxy
-        save_as = join_path(self.info.disks_dir, diskimage.split('/')[-1])
-        if os.path.isfile(save_as):
-            os.unlink(save_as)
-        try:
-            download = associated_task.add_subtask(
-                downloader.download,
-                is_required = False)
-            self.dimage_path = download(diskimage, save_as,
-                    web_proxy=proxy)
-            return self.dimage_path is not None
-        except Exception:
-            log.exception('Cannot download disk image file %s:' % diskimage)
-            return False
+    def download_diskimage(self, associated_task=None):
+        log.debug("Could not find any ISO or CD, downloading one now")
+        self.info.cd_path = None
+        url = self.info.distro.metalink_url
+        dimage_name=self.info.distro.metalink_url.split("/")[-1]
+        save_as = join_path(self.info.install_dir, dimage_name)
+        if os.path.exists(save_as):
+            try:
+                os.unlink(save_as)
+            except OSError:
+                logging.exception('Could not remove: %s' % save_as)
+        download = associated_task.add_subtask(
+             downloader.download,
+             is_required = True)
+        dimage_path = download(url, save_as, web_proxy=self.info.web_proxy)
+        if dimage_path:
+            self.info.dimage_path = dimage_path
+            return True
 
     def download_iso(self, associated_task=None):
         log.debug("Could not find any ISO or CD, downloading one now")
         self.info.cd_path = None
-        if not self.info.distro.metalink:
-            get_metalink = associated_task.add_subtask(
-                self.get_metalink, description=_("Downloading information on installation files"))
-            get_metalink()
-            if not self.info.distro.metalink:
-                raise Exception("Cannot download the metalink and therefore the ISO")
-        file = self.info.distro.metalink.files[0]
-        save_as = join_path(self.info.install_dir, file.name)
-        urls = self.select_mirrors(file.urls)
-        for url in urls[:5]:
-            if url.type == 'bittorrent':
-                if self.info.no_bittorrent:
-                    continue
-                if os.path.exists(save_as):
-                    try:
-                        os.unlink(save_as)
-                    except OSError:
-                        logging.exception('Could not remove: %s' % save_as)
-                btdownload = associated_task.add_subtask(
-                    btdownloader.download,
-                    is_required = False)
-                iso_path = btdownload(url.url, save_as)
+        url = self.info.distro.metalink_url
+        iso_name=self.info.distro.metalink_url.split("/")[-1]
+        save_as = join_path(self.info.install_dir, iso_name)
+        if os.path.exists(save_as):
+            try:
+                os.unlink(save_as)
+            except OSError:
+                logging.exception('Could not remove: %s' % save_as)
+        download = associated_task.add_subtask(
+             downloader.download,
+             is_required = True)
+        iso_path = download(url, save_as, web_proxy=self.info.web_proxy)
+        if iso_path:
+            check_iso = associated_task.add_subtask(
+                self.check_iso,
+                description = _("Checking installation files"))
+            if check_iso(iso_path):
+                self.info.iso_path = iso_path
+                return True
             else:
-                if os.path.exists(save_as):
-                    try:
-                        os.unlink(save_as)
-                    except OSError:
-                        logging.exception('Could not remove: %s' % save_as)
-                download = associated_task.add_subtask(
-                    downloader.download,
-                    is_required = True)
-                iso_path = download(url.url, save_as, web_proxy=self.info.web_proxy)
-            if iso_path:
-                check_iso = associated_task.add_subtask(
-                    self.check_iso,
-                    description = _("Checking installation files"))
-                if check_iso(iso_path):
-                    self.info.iso_path = iso_path
-                    return True
-                else:
-                    os.unlink(iso_path)
+                os.unlink(iso_path)
 
     def get_metalink(self, associated_task=None):
         associated_task.description = _("Downloading information on installation files")
@@ -500,6 +486,8 @@ class Backend(object):
         Use a local disk image specificed on the command line
         '''
         log.debug("Searching for image at %s" % self.info.dimage_path)
+        if self.dimage_path and os.path.exists(self.dimage_path):
+            return True
         if self.info.dimage_path \
         and os.path.exists(self.info.dimage_path):
             #TBD shall we do md5 check? Doesn't work well with daylies
@@ -514,6 +502,11 @@ class Backend(object):
                 return True
 
     def get_prespecified_iso(self, associated_task):
+
+        if self.iso_path \
+        and os.path.exists(self.iso_path):
+			return True
+
         if self.info.iso_path \
         and os.path.exists(self.info.iso_path):
             #TBD shall we do md5 check? Doesn't work well with daylies
@@ -618,14 +611,8 @@ class Backend(object):
         '''
         if self.get_prespecified_diskimage(associated_task):
             return associated_task.finish()
-        dimage = self.info.distro.diskimage
-        if self.download_diskimage(dimage, associated_task):
+        if self.download_diskimage(associated_task):
             return associated_task.finish()
-        else:
-            dimage2 = self.info.distro.diskimage2
-            if self.download_diskimage(dimage2, associated_task):
-                return associated_task.finish()
-
         raise Exception("Could not retrieve the required disk image files")
 
     def get_iso(self, associated_task=None):
@@ -703,8 +690,8 @@ class Backend(object):
         preseed_file = join_path(self.info.install_dir, "preseed_llx.cfg")
         write_file(preseed_file, template)
 
-        source = join_path(self.info.data_dir, "wubildr-disk.cfg")
-        target = join_path(self.info.install_dir, "wubildr-disk.cfg")
+        source = join_path(self.info.data_dir, "lliuwinldr-disk.cfg")
+        target = join_path(self.info.install_dir, "lliuwinldr-disk.cfg")
         copy_file(source, target)
 
     def create_preseed_cdboot(self):
@@ -770,36 +757,50 @@ class Backend(object):
     def modify_grub_configuration(self):
         template_file = join_path(self.info.data_dir, 'grub.install.cfg')
         template = read_file(template_file)
-        if self.info.run_task == "cd_boot":
+        rootflags = "rootflags=sync"
+        if self.info.distro.name=='LliureX-Live':
+            isopath = unix_path(self.info.iso_path)
+            dic = dict(
+                custom_installation_dir = unix_path(self.info.custominstall),
+                iso_path = isopath,
+                keyboard_variant = self.info.keyboard_variant,
+                keyboard_layout = self.info.keyboard_layout,
+                locale = self.info.locale,
+                accessibility = self.info.accessibility,
+                kernel = unix_path(self.info.kernel),
+                initrd = unix_path(self.info.initrd),
+                rootflags = rootflags,
+                title1 = "Booting the LliureX installation.",
+                title2 = "For more boot options, press `ESC' now...",
+                lliurex_mode_title = "LliureX",
+                normal_mode_title = "LliureX Live",
+			    #pae_mode_title = "PAE mode",
+			    # safe_graphic_mode_title = "Safe graphic mode",
+			    #intel_graphics_workarounds_title = "Intel graphics workarounds",
+			    #nvidia_graphics_workarounds_title = "Nvidia graphics workarounds",
+			    #acpi_workarounds_title = "ACPI workarounds",
+			    #verbose_mode_title = "Verbose mode",
+			    #demo_mode_title =  "Demo mode",
+            )
+        else:
             isopath = ""
+            kernel=''
+            initrd=''
+            dic=dict(
+                lliurex_mode_title = "LliureX",
+                title1 = "Booting the LliureX installation.",
+                title2 = "For more boot options, press `ESC' now...",
+                rootflags = rootflags,
+                custom_installation_dir = unix_path(self.info.custominstall),
+                iso_path = isopath,
+                keyboard_variant = self.info.keyboard_variant,
+                keyboard_layout = self.info.keyboard_layout,
+                locale = self.info.locale,
+                accessibility = self.info.accessibility,
+            )
         ## TBD at the moment we are extracting the ISO, not the CD content
         #~ elif self.info.cd_path:
             #~ isopath = unix_path(self.info.cd_path)
-        elif self.info.iso_path:
-            isopath = unix_path(self.info.iso_path)
-        rootflags = "rootflags=sync"
-        dic = dict(
-            custom_installation_dir = unix_path(self.info.custominstall),
-            iso_path = isopath,
-            keyboard_variant = self.info.keyboard_variant,
-            keyboard_layout = self.info.keyboard_layout,
-            locale = self.info.locale,
-            accessibility = self.info.accessibility,
-            kernel = unix_path(self.info.kernel),
-            initrd = unix_path(self.info.initrd),
-            rootflags = rootflags,
-            title1 = "Booting the LliureX installation.",
-            title2 = "For more boot options, press `ESC' now...",
-            lliurex_mode_title = "LliureX",
-            normal_mode_title = "LliureX Live",
-			#pae_mode_title = "PAE mode",
-			# safe_graphic_mode_title = "Safe graphic mode",
-			#intel_graphics_workarounds_title = "Intel graphics workarounds",
-			#nvidia_graphics_workarounds_title = "Nvidia graphics workarounds",
-			#acpi_workarounds_title = "ACPI workarounds",
-			#verbose_mode_title = "Verbose mode",
-			#demo_mode_title =  "Demo mode",
-            )
         content = template
         for k,v in dic.items():
             k = "$(%s)" % k
@@ -857,7 +858,7 @@ class Backend(object):
                 #if distro.is_valid_iso(self.info.iso_path, self.info.check_arch):
                     #self.info.cd_path = None
                  return self.info.dimage_path, 'LliureX'
-        #Search local ISOs
+        #Search local IMGs
         log.debug("Searching for local IMGs")
         for path in self.get_iso_search_paths():
             path = join_path(path, '*.img')
@@ -883,8 +884,13 @@ class Backend(object):
         #Search local ISOs
         log.debug("Searching for local ISOs")
         for path in self.get_iso_search_paths():
+            log.debug("******************")
+            log.debug("******************")
+            log.debug("******************")
+            log.debug("Seach %s"%path)
             path = join_path(path, '*.iso')
             isos = glob.glob(path)
+            log.debug("ISOS %s"%isos)
             for iso in isos:
                 for distro in self.info.distros:
                     if distro.is_valid_iso(iso, self.info.check_arch):

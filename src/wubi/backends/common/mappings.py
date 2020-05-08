@@ -966,6 +966,7 @@ language2lang_country = {
     "Catalan (ES)" : "ca_ES",
     "Catalan (FR)" : "ca_FR",
     "Catalan (IT)" : "ca_IT",
+    "Valencian (ES)" : "ca_ES.utf8@valencia",
     "Chinese (CN)": "zh_CN",
     "Cree (UA)" : "crh_UA",
     "Czech (CZ)" : "cs_CZ",
@@ -1238,6 +1239,7 @@ language2lang_country = {
     "Ukrainian" : "uk_UA",
     "Urdu" : "ur_PK",
     "Uzbek" : "uz_UZ",
+    "Valencian" : "ca_ES.utf8@valencia",
     "Venda" : "ve_ZA",
 }
 

@@ -42,6 +42,8 @@ class Distro(object):
             min_memory_mb, installation_dir, diskimage=None, diskimage2=None,
             min_iso_size=0, max_iso_size=0):
         self.name = name
+        if name=='Lliurex-Live':
+            self.name='LliureX'
         self.version = version
         self.arch = arch
         self.kernel = os.path.normpath(kernel)
@@ -64,6 +66,7 @@ class Distro(object):
         self.website = website
         self.support = support
         self.installation_dir = installation_dir
+        self.iso_path = ""
         self.diskimage = diskimage
         self.diskimage2 = diskimage2
 
@@ -168,9 +171,16 @@ class Distro(object):
             log.debug('could not get info %s' % info)
             return False
         name, version, subversion, arch = info # used in backend as well
+        switch_name=False
+        if self.name=='LliureX-Live':
+            switch_name=True
+            self.name='LliureX'
         if self.name and name != self.name and self.version:
             log.debug('wrong name: %s != %s' % (name, self.name))
             return False
+        if switch_name:
+            switch_name=False
+            self.name='LliureX-Live'
         if self.version and not (version == self.version or version.startswith(self.version + '.')):
             log.debug('wrong version: %s != %s' % (version, self.version))
             return False
