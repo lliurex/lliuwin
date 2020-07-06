@@ -138,9 +138,10 @@ class InstallationPage(Page):
                     self.size_list.set_value("%sGB" % i)
                     return
         i = int(len(self.size_list_gb)/2)
-        installation_size_gb = self.size_list_gb[i]
-        self.size_list.set_value("%sGB" % installation_size_gb)
-        self.on_size_change()
+        if len(self.size_list_gb)>i:
+            installation_size_gb = self.size_list_gb[i]
+            self.size_list.set_value("%sGB" % installation_size_gb)
+            self.on_size_change()
 
     def populate_distro_list(self):
         distros = []

@@ -510,8 +510,10 @@ class WindowsBackend(Backend):
         paths = []
         paths += [os.path.dirname(self.info.original_exe)]
         paths += [drive.path for drive in self.info.drives]
-        paths += [os.environ.get('Desktop', None)]
-        userProfile=os.environ.get('USERPROFILE', None)
+#        paths += [os.environ.get('Desktop', None)]
+#        userProfile=os.environ.get('USERPROFILE', None)
+        paths += [os.getenv('Desktop')]
+        userProfile=os.getenv('USERPROFILE')
         if userProfile:
             paths += [os.path.join(os.path.join(userProfile),'Desktop')]
             paths += [os.path.join(os.path.join(userProfile),'Downloads')]
