@@ -860,9 +860,15 @@ class Backend(object):
                  return self.info.dimage_path, 'LliureX'
         #Search local IMGs
         log.debug("Searching for local IMGs")
+        imgs=[]
         for path in self.get_iso_search_paths():
-            path = join_path(path, '*.img')
-            imgs = glob.glob(path)
+            log.debug("Seach %s"%path)
+            if os.path.isdir(path):
+                for f in os.listdir(path):
+                    if f.endswith(".img"):
+                        imgs.append(os.path.join(path,f))
+			#path = join_path(path, '*.img')
+			#imgs = glob.glob(path)
             for img in imgs:
                 #for distro in self.info.distros:
                     #if distro.is_valid_iso(iso, self.info.check_arch):
@@ -883,13 +889,15 @@ class Backend(object):
                     return self.info.iso_path, distro
         #Search local ISOs
         log.debug("Searching for local ISOs")
+        isos=[]
         for path in self.get_iso_search_paths():
-            log.debug("******************")
-            log.debug("******************")
-            log.debug("******************")
             log.debug("Seach %s"%path)
-            path = join_path(path, '*.iso')
-            isos = glob.glob(path)
+            if os.path.isdir(path):
+                for f in os.listdir(path):
+                    if f.endswith(".iso"):
+                        isos.append(os.path.join(path,f))
+			#path = join_path(path, '*.iso')
+			#isos = glob.glob(path)
             log.debug("ISOS %s"%isos)
             for iso in isos:
                 for distro in self.info.distros:
