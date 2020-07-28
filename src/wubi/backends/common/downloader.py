@@ -74,9 +74,9 @@ def download(url, filename=None, associated_task=None, web_proxy = None):
     if os.path.isdir(filename):
         basename = os.path.basename(url)
         filename = os.path.join(filename, basename)
-	try:
-    	filename = urlgrabber.urlgrab(url, filename=filename)
-	except:
+    try:
+        filename = urlgrabber.urlgrab(url, filename=filename)
+    except:
         filename = os.path.join(filename, basename)
     return filename
 
