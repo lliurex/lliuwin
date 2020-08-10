@@ -212,7 +212,7 @@ class Distro(object):
         else:
             info = disk_non_standard_info_re.match(orig_info)
             name = info.group('name').replace('-', ' ')
-            version = "19.04"
+            version = "19.07"
             subversion = info.group('subversion')
             arch = info.group('arch')
             
