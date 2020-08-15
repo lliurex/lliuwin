@@ -1,6 +1,6 @@
 export SHELL = sh
 PACKAGE = lliuwin
-ICON = data/images/LliureX.ico
+ICON = data/images/lliuwin.ico
 VERSION = $(shell head -n 1 debian/changelog | sed -e "s/^$(PACKAGE) (\(.*\)).*/\1/g" | cut -d r -f 1)
 REVISION = $(shell head -n 1 debian/changelog | sed -e "s/^$(PACKAGE) (\(.*\)).*/\1/g" | cut -d r -f 2)
 COPYRIGHTYEAR = 2009
