@@ -862,7 +862,7 @@ class WindowsBackend(Backend):
                 f.write('oLink.Save\n')
             try:
                 run_command(['cscript', vbsFile])
-				os.remove(vbsFile)
+                os.remove(vbsFile)
             except Exception, err: #this shouldn't be fatal
                 log.error(err)
 
