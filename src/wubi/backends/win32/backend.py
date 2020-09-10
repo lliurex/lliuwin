@@ -844,10 +844,10 @@ class WindowsBackend(Backend):
                 id)
 			#Generate switchto file
             desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
-            batFile = join_path(self.info.target_dir, 'switchLliurex.bat')
+            batFile = join_path(self.info.target_dir, 'switchLliurex.ps1')
             log.debug("BAT %s"%batFile)
             with open (batFile,'w') as f:
-                f.write("%s /set {fwbootmgr} bootsequence %s\n"%(bcdedit,id))
+                f.write("%s /set \"{fwbootmgr}\" bootsequence \"%s\"\n"%(bcdedit,id))
                 f.write("shutdown /t 1 /r\n")
             #Generate shortcut
             vbsFile = join_path(self.info.target_dir, 'batShortcut.vbs')
@@ -856,7 +856,7 @@ class WindowsBackend(Backend):
                 f.write('Set oWS = WScript.CreateObject("WScript.Shell")\n')
                 f.write('sLinkFile = "%s\LliureX.lnk"\n'%desktop)
                 f.write('Set oLink = oWS.CreateShortcut(sLinkFile)\n')
-                f.write('oLink.TargetPath = "%s"\n'%batFile)
+                f.write('oLink.TargetPath = "powershell.exe -noexit -ExecutionPolicy Bypass &\"& \"\"%s\"\"\""\n'%batFile)
                 f.write('oLink.Description = "LliureX 19"\n')
                 f.write('oLink.IconLocation = "%s"\n'%(join_path(self.info.target_dir,'LliureX.ico')))
                 f.write('oLink.Save\n')
