@@ -8,19 +8,20 @@ msgstr ""
 "Project-Id-Version: wubi\n"
 "Report-Msgid-Bugs-To: agostino.russo@gmail.com\n"
 "POT-Creation-Date: 2011-06-24 10:56+0100\n"
-"PO-Revision-Date: 2009-12-07 16:00+0000\n"
-"Last-Translator: David Planella <david.planella@ubuntu.com>\n"
-"Language-Team: Catalan <ca@li.org>\n"
-"Language: ca\n"
+"PO-Revision-Date: 2020-11-19 13:40+0000\n"
+"Last-Translator: Angels <gimenez_angcam@gva.es>\n"
+"Language-Team: Valencian <http://weblate.lliurex.net/projects/lliuwin/"
+"lliuwin/ca@valencia/>\n"
+"Language: ca@valencia\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Launchpad (build 16042)\n"
+"X-Generator: Weblate 4.3.1\n"
 "X-Launchpad-Export-Date: 2012-09-27 13:48+0000\n"
 
 #: src/wubi/application.py:65
-#, python-format, fuzzy, fuzzy
+#, python-format
 msgid ""
 "An error occurred:\n"
 "\n"
@@ -32,41 +33,37 @@ msgstr ""
 "\n"
 "%(error)s\n"
 "\n"
-"Per a obtenir-ne més informació, vegeu-ne el fitxer de registre: %(log)s"
+"Per a obtindre'n més informació, vegeu-ne el fitxer de registre: %(log)s"
 
 #: src/wubi/application.py:148 src/wubi/application.py:213
-#, python-format, fuzzy
+#, python-format
 msgid ""
 "A previous installation was detected in %s.\n"
 "Please uninstall that before continuing."
 msgstr ""
 "S'ha detectat una instal·lació anterior a %s.\n"
-"Hauríeu de desinstal·lar-la abans de continuar."
+"Desinstal·leu-la abans de continuar."
 
 #: src/wubi/application.py:195
-#, fuzzy
 msgid "No CD detected, cannot run CD menu"
 msgstr ""
 "No s'ha detectat cap CD, per la qual cosa no es pot executar el menú del CD"
 
 #: src/wubi/application.py:203
-#, fuzzy
 msgid ""
 "Could not find any valid CD.\n"
 "CD boot helper can only be used with a Live CD."
 msgstr ""
 "No s'ha trobat cap CD vàlid.\n"
-"L'auxiliar d'arrencada del CD només es pot utilitzar amb un CD autònom."
+"L'auxiliar d'arrancada del CD només es pot utilitzar amb un CD autònom."
 
 #: src/wubi/backends/common/backend.py:76
 #: src/wubi/backends/common/backend.py:97
-#, fuzzy
 msgid "Selecting the target directory"
 msgstr "S'està seleccionant el directori de destinació"
 
 #: src/wubi/backends/common/backend.py:77
 #: src/wubi/backends/common/backend.py:98
-#, fuzzy
 msgid "Creating the installation directories"
 msgstr "S'estan creant els directoris d'instal·lació"
 
@@ -74,13 +71,11 @@ msgstr "S'estan creant els directoris d'instal·lació"
 #: src/wubi/backends/common/backend.py:88
 #: src/wubi/backends/common/backend.py:99
 #: src/wubi/backends/common/backend.py:107
-#, fuzzy
 msgid "Uncompressing files"
 msgstr "S'estan descomprimint els fitxers"
 
 #: src/wubi/backends/common/backend.py:79
 #: src/wubi/backends/common/backend.py:100
-#, fuzzy
 msgid "Creating the uninstaller"
 msgstr "S'està creant el desinstal·lador"
 
@@ -88,111 +83,94 @@ msgstr "S'està creant el desinstal·lador"
 #: src/wubi/backends/common/backend.py:101
 #: src/wubi/backends/common/backend.py:424
 #: src/wubi/backends/common/backend.py:430
-#, fuzzy
 msgid "Copying installation files"
 msgstr "S'estan copiant els fitxers d'instal·lació"
 
 #: src/wubi/backends/common/backend.py:81
-#, fuzzy
 msgid "Retrieving installation files"
 msgstr "S'estan recuperant els fitxers d'instal·lació"
 
 #: src/wubi/backends/common/backend.py:82
 #: src/wubi/backends/common/backend.py:103
-#, fuzzy
 msgid "Extracting the kernel"
 msgstr "S'està extraient el nucli"
 
 #: src/wubi/backends/common/backend.py:83
-#, fuzzy
 msgid "Choosing disk sizes"
-msgstr "S'estan triant les mides de disc"
+msgstr "S'estan triant les mides del disc"
 
 #: src/wubi/backends/common/backend.py:84
 #: src/wubi/backends/common/backend.py:104
-#, fuzzy
 msgid "Creating a preseed file"
 msgstr "S'està creant un fitxer de preinstal·lació"
 
 #: src/wubi/backends/common/backend.py:85
 #: src/wubi/backends/common/backend.py:105
-#, fuzzy
 msgid "Adding a new bootloader entry"
-msgstr "S'està afegint una entrada nova de carregador d'arrencada"
+msgstr "S'està afegint una entrada nova de carregador d'arrancada"
 
 #: src/wubi/backends/common/backend.py:86
 #: src/wubi/backends/common/backend.py:106
-#, fuzzy
 msgid "Setting up installation boot menu"
-msgstr "S'està configurant el menú d'arrencada de la instal·lació"
+msgstr "S'està configurant el menú d'arrancada de la instal·lació"
 
 #: src/wubi/backends/common/backend.py:87
-#, fuzzy
 msgid "Creating the virtual disks"
 msgstr "S'estan creant els discos virtuals"
 
 #: src/wubi/backends/common/backend.py:89
 #: src/wubi/backends/common/backend.py:108
-#, fuzzy
 msgid "Ejecting the CD"
 msgstr "S'està expulsant el CD"
 
 #: src/wubi/backends/common/backend.py:91
 #: src/wubi/frontends/win32/progress_page.py:39
-#, python-format, fuzzy
+#, python-format
 msgid "Installing %(distro)s-%(version)s"
 msgstr "S'està instal·lant %(distro)s-%(version)s"
 
 #: src/wubi/backends/common/backend.py:102
-#, fuzzy
 msgid "Extracting CD content"
 msgstr "S'està extraient el contingut del CD"
 
 #: src/wubi/backends/common/backend.py:110
-#, fuzzy
 msgid "Installing CD boot helper"
-msgstr "S'està instal·lant l'auxiliar d'arrencada del CD"
+msgstr "S'està instal·lant l'auxiliar d'arrancada del CD"
 
 #: src/wubi/backends/common/backend.py:115
 #: src/wubi/backends/common/backend.py:117
-#, fuzzy
 msgid "Rebooting"
 msgstr "S'està reiniciant"
 
 #: src/wubi/backends/common/backend.py:122
-#, fuzzy
 msgid "Backup ISO"
 msgstr "Còpia de seguretat en ISO"
 
 #: src/wubi/backends/common/backend.py:123
-#, fuzzy
 msgid "Remove bootloader entry"
-msgstr "Suprimeix l'entrada del carregador d'arrencada"
+msgstr "Suprimeix l'entrada del carregador d'arrancada"
 
 #: src/wubi/backends/common/backend.py:124
-#, fuzzy
 msgid "Remove target dir"
 msgstr "Suprimeix el directori de destinació"
 
 #: src/wubi/backends/common/backend.py:125
-#, fuzzy
 msgid "Remove registry key"
 msgstr "Suprimeix la clau del registre"
 
 #: src/wubi/backends/common/backend.py:126
-#, python-format, fuzzy
+#, python-format
 msgid "Uninstalling %s"
 msgstr "S'està desinstal·lant %s"
 
 #: src/wubi/backends/common/backend.py:257
-#, python-format, fuzzy
+#, python-format
 msgid "Checking CD %s"
 msgstr "S'està comprovant el CD %s"
 
 #: src/wubi/backends/common/backend.py:283
 #: src/wubi/backends/common/backend.py:327
 #: src/wubi/backends/common/backend.py:363
-#, fuzzy
 msgid "Downloading information on installation files"
 msgstr "S'està baixant informació sobre els fitxers d'instal·lació"
 
@@ -200,54 +178,52 @@ msgstr "S'està baixant informació sobre els fitxers d'instal·lació"
 #: src/wubi/backends/common/backend.py:355
 #: src/wubi/backends/common/backend.py:418
 #: src/wubi/backends/common/backend.py:468
-#, fuzzy
 msgid "Checking installation files"
 msgstr "S'estan comprovant els fitxers d'instal·lació"
 
 #: src/wubi/backends/common/backend.py:389
-#, python-format, fuzzy
+#, python-format
 msgid "Validating %s"
 msgstr "S'està validant %s"
 
 #: src/wubi/backends/common/backend.py:455
-#, python-format, fuzzy
+#, python-format
 msgid "Extracting files from %s"
 msgstr "S'estan extraient els fitxers de %s"
 
 #: src/wubi/backends/common/backend.py:531
-#, python-format, fuzzy
+#, python-format
 msgid "Checking %s"
 msgstr "S'està comprovant %s"
 
 #: src/wubi/backends/common/btdownloader.py:36
 #: src/wubi/backends/common/downloader.py:65
-#, python-format, fuzzy
+#, python-format
 msgid "Downloading %s"
 msgstr "S'està baixant %s"
 
 #: src/wubi/backends/common/tasklist.py:256
 #: src/wubi/backends/common/tasklist.py:260
-#, fuzzy
 msgid "0s"
 msgstr "0 s"
 
 #: src/wubi/backends/common/tasklist.py:269
-#, python-format, fuzzy
+#, python-format
 msgid "%ih"
 msgstr "%i h"
 
 #: src/wubi/backends/common/tasklist.py:271
-#, python-format, fuzzy
+#, python-format
 msgid "%imin"
 msgstr "%i min"
 
 #: src/wubi/backends/common/tasklist.py:274
-#, python-format, fuzzy
+#, python-format
 msgid "%is"
 msgstr "%i s"
 
 #: src/wubi/backends/win32/backend.py:150
-#, python-format, fuzzy
+#, python-format
 msgid ""
 "The installation failed. Logs have been saved in: %s.\n"
 "\n"
@@ -257,22 +233,20 @@ msgid ""
 msgstr ""
 "Ha fallat la instal·lació. Se n'han desat els registres a: %s.\n"
 "\n"
-"Tingueu en compte que en mode detallat pot ser que aquests incloguin la contrasenya.\n"
+"Tingueu en compte que en el mode detallat aquests podrien contindre la "
+"contrasenya.\n"
 "\n"
 "Ara es reiniciarà el sistema."
 
 #: src/wubi/frontends/win32/accessibility_page.py:34
-#, fuzzy
 msgid "Accessibility profile"
 msgstr "Perfil d'accessibilitat"
 
 #: src/wubi/frontends/win32/accessibility_page.py:35
-#, fuzzy
 msgid "Please select the appropriate accessibility profile"
-msgstr "Trieu el perfil d'accessibilitat apropiat per a vós"
+msgstr "Trieu el vostre perfil d'accessibilitat apropiat"
 
 #: src/wubi/frontends/win32/accessibility_page.py:39
-#, fuzzy
 msgid "Next >>"
 msgstr "Següent >>"
 
@@ -283,27 +257,22 @@ msgstr "Següent >>"
 #: src/wubi/frontends/win32/installation_page.py:183
 #: src/wubi/frontends/win32/progress_page.py:44
 #: src/wubi/frontends/win32/uninstallation_page.py:45
-#, fuzzy
 msgid "Cancel"
 msgstr "Cancel·la"
 
 #: src/wubi/frontends/win32/accessibility_page.py:50
-#, fuzzy
 msgid "Visibility Aids"
 msgstr "Ajudes a la visualització"
 
 #: src/wubi/frontends/win32/accessibility_page.py:51
-#, fuzzy
 msgid "Visibility1"
 msgstr "Visibilitat1"
 
 #: src/wubi/frontends/win32/accessibility_page.py:52
-#, fuzzy
 msgid "Visibility2"
 msgstr "Visibilitat2"
 
 #: src/wubi/frontends/win32/accessibility_page.py:53
-#, fuzzy
 msgid "Visibility3"
 msgstr "Visibilitat3"
 
@@ -313,17 +282,14 @@ msgid "Braille"
 msgstr "Braille"
 
 #: src/wubi/frontends/win32/accessibility_page.py:57
-#, fuzzy
 msgid "Mobility Aids"
 msgstr "Ajudes de mobilitat"
 
 #: src/wubi/frontends/win32/accessibility_page.py:58
-#, fuzzy
 msgid "Mobility1"
 msgstr "Mobilitat1"
 
 #: src/wubi/frontends/win32/accessibility_page.py:59
-#, fuzzy
 msgid "Mobility2"
 msgstr "Mobilitat2"
 
@@ -340,12 +306,10 @@ msgstr "< Enrere"
 #: src/wubi/frontends/win32/cd_finish_page.py:35
 #: src/wubi/frontends/win32/installation_finish_page.py:35
 #: src/wubi/frontends/win32/uninstallation_finish_page.py:35
-#, fuzzy
 msgid "Finish"
 msgstr "Finalitza"
 
 #: src/wubi/frontends/win32/cd_finish_page.py:43
-#, fuzzy
 msgid "Reboot required"
 msgstr "Cal que reinicieu el sistema"
 
