@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: wubi\n"
 "Report-Msgid-Bugs-To: agostino.russo@gmail.com\n"
 "POT-Creation-Date: 2011-06-24 10:56+0100\n"
-"PO-Revision-Date: 2020-11-26 08:45+0000\n"
+"PO-Revision-Date: 2021-01-18 14:03+0000\n"
 "Last-Translator: Angels <gimenez_angcam@gva.es>\n"
 "Language-Team: Valencian <http://weblate.lliurex.net/projects/lliuwin/"
 "lliuwin/ca@valencia/>\n"
@@ -440,7 +440,7 @@ msgid "I want to manually reboot later"
 msgstr "Vull reiniciar manualment més tard"
 
 #: src/wubi/frontends/win32/installation_page.py:73
-#, python-format, fuzzy
+#, python-format
 msgid ""
 "Only %sMB of disk space are available.\n"
 "At least 1024MB are required as a bare minimum. Quitting"
@@ -543,7 +543,6 @@ msgstr ""
 "guions baixos."
 
 #: src/wubi/frontends/win32/installation_page.py:334
-#, fuzzy
 msgid "The selected username is reserved, please select a different one."
 msgstr ""
 "El nom d'usuari que heu seleccionat està reservat. Seleccioneu-ne un altre."
