@@ -859,7 +859,7 @@ class WindowsBackend(Backend):
                 f.write('oLink.TargetPath = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"&{start-process powershell -ArgumentList \'-ExecutionPolicy Bypass -NoProfile -File %s\' -Verb RunAs}\""\n'%batFile)
 								
 					#			&\"& \"\"%s\"\"\""\n'%batFile)
-                f.write('oLink.Description = "LliureX 19"\n')
+                f.write('oLink.Description = "LliureX 21"\n')
                 f.write('oLink.IconLocation = "%s"\n'%(join_path(self.info.target_dir,'LliureX.ico')))
                 f.write('oLink.Save\n')
             try:
