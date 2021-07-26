@@ -856,7 +856,8 @@ class WindowsBackend(Backend):
                 f.write('Set oWS = WScript.CreateObject("WScript.Shell")\n')
                 f.write('sLinkFile = "%s\LliureX.lnk"\n'%desktop)
                 f.write('Set oLink = oWS.CreateShortcut(sLinkFile)\n')
-                f.write('oLink.TargetPath = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"&{start-process powershell -ArgumentList \'-ExecutionPolicy Bypass -NoProfile -File %s\' -Verb RunAs}\""\n'%batFile)
+                f.write('oLink.TargetPath = "powershell.exe"\n')
+                f.write('oLink.Arguments="-ExecutionPolicy Bypass -NoProfile -Command \"\"&{start-process powershell -ArgumentList \'-ExecutionPolicy Bypass -NoProfile -File %s\' -Verb RunAs}\"\""\n'%batFile)
 								
 					#			&\"& \"\"%s\"\"\""\n'%batFile)
                 f.write('oLink.Description = "LliureX 21"\n')
