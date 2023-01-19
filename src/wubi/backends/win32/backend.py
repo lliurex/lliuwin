@@ -566,11 +566,11 @@ class WindowsBackend(Backend):
     def check_EFI(self):
         efi = False
         if self.info.bootloader == 'vista':
-            bcdedit = join_path(os.getenv('SystemDrive'), 'bcdedit.exe')
+            bcdedit = join_path(os.environ['systemroot'], 'System32', 'bcdedit.exe')
             if not os.path.isfile(bcdedit):
                 bcdedit = join_path(os.environ['systemroot'], 'sysnative', 'bcdedit.exe')
             if not os.path.isfile(bcdedit):
-                bcdedit = join_path(os.environ['systemroot'], 'System32', 'bcdedit.exe')
+                bcdedit = join_path(os.getenv('SystemDrive'), 'bcdedit.exe')
             if not os.path.isfile(bcdedit):
                 log.error("Cannot find bcdedit")
                 return False
