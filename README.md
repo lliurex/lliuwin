@@ -44,7 +44,7 @@ Lliuwin performs the following tasks:
 * Checks that the minimum installation requirements are met
 * Retrieves required user information via a GUI
 * Looks for available local CDs and ISO files
-* Downloads the ISO if one is required, using Bittorrent and an HTTP download manager (not supoported by lliuwin)
+* Downloads the ISO if one is required, using Bittorrent and an HTTP download manager (not supported by lliuwin)
 * Checks the ISO/CD MD5 sums and the MD5 signature
 * Extracts the kernel and initrd from the ISO
 * Adds a new boot entry to the existing windows bootloader
