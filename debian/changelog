@@ -1,22 +1,9 @@
-<<<<<<< HEAD
-lliuwin (21.10) focal; urgency=medium
+lliuwin (22.04.22r001) focal; urgency=medium
 
-  * Update pycrypto url for windows download
-  * Works under lliurex 21 host
+  * Sync with master
 
  -- Juanma1980 <juanma1980@gmail.com>  Tue, 12 Apr 2022 19:04:24 +0200
 
-lliuwin (21.07) bionic; urgency=medium
-
-  * Set appropiate urls for lliurex21 
-
- -- Juanma1980 <juanma1980@gmail.com>  Thu, 08 Jul 2021 12:53:59 +0200
-
-lliuwin (19.04r001) bionic; urgency=low
-  [ LliureX fork ]
-
-  * Works with LliureX 16 and 19
-=======
 wubi (22.04.1r345) jammy; urgency=low
 
   [Hakuna Matata]
@@ -34,6 +21,21 @@ wubi (22.04r345) jammy; urgency=low
     https://github.com/hakuna-m/wubiuefi/issues/305
   * Change link for www.voidspace.org.uk
     https://github.com/hakuna-m/wubiuefi/issues/289
+
+lliuwin (21.10) focal; urgency=medium
+
+  * Update pycrypto url for windows download
+  * Works under lliurex 21 host
+
+ -- Juanma1980 <juanma1980@gmail.com>  Tue, 12 Apr 2022 19:04:24 +0200
+
+
+lliuwin (21.07) bionic; urgency=medium
+
+  * Set appropiate urls for lliurex21 
+
+ -- Juanma1980 <juanma1980@gmail.com>  Thu, 08 Jul 2021 12:53:59 +0200
+
 
 wubi (20.04r344) focal; urgency=low
 
@@ -93,6 +95,7 @@ wubi (19.10r338) eoan; urgency=low
   * fix for changed initramfs-tools
     https://github.com/hakuna-m/wubiuefi/issues/169
 
+
 wubi (19.04r337) disco; urgency=low
 
   [Hakuna Matata]
@@ -107,6 +110,11 @@ wubi (19.04r336) disco; urgency=low
   * Bump to 19.04
   * change lupin-support/grub-mkimage because of new sync error
     https://github.com/hakuna-m/wubiuefi/issues/143
+
+lliuwin (19.04r001) bionic; urgency=low
+  [ LliureX fork ]
+
+  * Works with LliureX 16 and 19
 
 wubi (18.10r335) cosmic; urgency=low
 
