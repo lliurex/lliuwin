@@ -1,8 +1,8 @@
 #!/bin/sh
 
-shim_signed_url="http://archive.ubuntu.com/ubuntu/pool/main/s/shim-signed/shim-signed_1.40.3+15+1533136590.3beb971-0ubuntu1_amd64.deb"
-shim_url="http://archive.ubuntu.com/ubuntu/pool/main/s/shim/shim_15+1533136590.3beb971-0ubuntu1_amd64.deb"
-shim_blacklist_md5="3aef9c72ad50faa8db576c01f85a0915"
+shim_signed_url="http://archive.ubuntu.com/ubuntu/pool/main/s/shim-signed/shim-signed_1.34.9+13-0ubuntu2_amd64.deb"
+shim_url="http://archive.ubuntu.com/ubuntu/pool/main/s/shim/shim_13-0ubuntu2_amd64.deb"
+shim_blacklist_md5="f7a57b08bc7c1c85417ae4cea582d1d4"
 
 if [ ! -e /usr/lib/grub/i386-pc/moddep.lst ]; then
 	echo "Installing grub-pc-bin"
@@ -46,12 +46,4 @@ if [ ! -e .key ];then
         openssl req -new -x509 -newkey rsa:2048 -keyout .key/$(whoami)_wubi.key \
 	-out  .key/$(whoami)_wubi.crt -nodes -days 3650 -subj "/CN="$(whoami)" Wubi/"
 	openssl x509 -in  .key/$(whoami)_wubi.crt -out  .key/$(whoami)_wubi.cer -outform DER
-fi
-if [ ! -e data/custom-installation/packages/lupin-support ]; then
-	echo "Downloading lupin-support packages"
-	mkdir -p data/custom-installation/packages/lupin-support
-	cd data/custom-installation/packages/lupin-support
-	apt-get download lupin-support:i386 #TBD do not assume apt
-	apt-get download lupin-support:amd64 #TBD do not assume apt
-	cd ../../../..
 fi
