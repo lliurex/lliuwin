@@ -115,7 +115,7 @@ class InstallationPage(Page):
         target_drive = self.get_drive()
         self.size_list_gb = []
         self.size_list.clear()
-        i_size_list = range(1, 33) + [64, 128, 256, 512]
+        i_size_list = list(range(16, 65,16)) +list(range(96,257,32)) + list(range(384,1025,128))
         if self.info.installation_size_mb:
             i = int(self.info.installation_size_mb/1000)
             if i not in i_size_list:
@@ -128,6 +128,8 @@ class InstallationPage(Page):
                 if i * 1000 + self.info.distro.max_iso_size/1024**2 + 100 <= target_drive.free_space_mb:
                     self.size_list_gb.append(i)
                     self.size_list.add_item("%sGB" % i)
+        self.size_list_gb.append(int(target_drive.free_space_mb/1024))
+        self.size_list.add_item("%sGB" % int(target_drive.free_space_mb/1024))
         self.select_default_size()
 
     def select_default_size(self):
