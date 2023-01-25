@@ -847,7 +847,7 @@ class WindowsBackend(Backend):
             batFile = join_path(self.info.target_dir, 'switchLliurex.ps1')
             log.debug("BAT %s"%batFile)
             with open (batFile,'w') as f:
-                f.write("%s /set \"{fwbootmgr}\" bootsequence \"%s\"\n"%(bcdedit,id))
+                f.write("%s /set \"{fwbootmgr}\" bootsequence \"%s\"\n"%("bcdedit.exe",id))
                 f.write("shutdown /t 1 /r\n")
             #Generate shortcut
             vbsFile = join_path(self.info.target_dir, 'batShortcut.vbs')
