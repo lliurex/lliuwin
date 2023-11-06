@@ -5,11 +5,15 @@
 
 LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
 LOCAL_IMG=/home/${SUDO_USER}/lliuwin2.img
-IMG_SIZE=9G
-RELEASE=focal
+IMG_SIZE=11G
+RELEASE=jammy
+if [[ ! "x"$2 == "x" ]]
+then
+	RELEASE=$2
+fi
 REMOTE_URL=http://lliurex.net/${RELEASE} 
 LLIUREX_META=lliurex-meta-desktop-lite
-EXTRA_PACKAGES="linux-image-5.15.0-57-generic linux-modules-5.15.0-57-generic linux-modules-extra-5.15.0-57-generic linux-firmware lliuwin-wizard"
+EXTRA_PACKAGES="linux-firmware lliuwin-wizard"
 
 function mount_img()
 {
@@ -92,6 +96,8 @@ function show_help()
 {
 	printf "\n"
 	printf "Helper for building a lliurex rootfs for Lliuwin\n"
+	printf "Usage:\n"
+	printf "\t$0 [bionic|focal|jammy|...]. The release is optional, defaults to $RELEASE\n"
 	printf "Config is done editing this shell\n"
 	printf "Options:\n"
 	printf "\tprocess: Make all. Usually you want this, other options are only for developing/testing the image.\n"
@@ -102,6 +108,7 @@ function show_help()
 	printf "\tinstall: Install the meta-package inside the chroot\n"
 	printf "\thelp: Shows this missage\n"
 	printf "\n"
+	exit 0
 }
 
 function clean()
@@ -112,18 +119,22 @@ function clean()
 
 }
 
+function only_root()
+{
+	if [ $UID -ne 0 ]
+	then
+		echo "Only root allowed"
+		exit 1
+	fi
+	printf "RELEASE: $RELEASE\nURL: $REMOTE_URL\n"
+}
 #Flag for avoiding duplicated mounts
 MOUNT=0
-if [ $UID -ne 0 ]
-then
-	echo "Only root allowed"
-	exit 1
-fi
-printf "RELEASE: $RELEASE\nURL: $REMOTE_URL\n"
 if [ $# -gt 0 ]
 then
 	case $1 in
 		"process")
+			only_root
 			allocate_img
 			debootstrap_img
 			configure_chroot
@@ -131,23 +142,29 @@ then
 			umount_chroot
 			;;
 		"allocate")
+			only_root
 			allocate_img
 			;;
 		"debootstrap")
+			only_root
 			debootstrap_img
 			;;
 		"mount")
+			only_root
 			configure_chroot
 			;;
 		"umount")
+			only_root
 			umount_chroot
 			;;
 		"install")
+			only_root
 			configure_chroot
 			install_meta
 			umount_chroot
 			;;
 		"clean")
+			only_root
 			clean
 			;;
 		*)
