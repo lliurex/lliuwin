@@ -79,7 +79,7 @@ class Backend(object):
         self.iso_path = self.info.distro.iso_path
         # don't use diskimage for a FAT32 target directory
         #if self.dimage_path and not self.cd_path and not self.iso_path and not self.info.target_drive.is_fat():
-		#Lliurex-Live boots from iso, Lllurex from img
+        #Lliurex-Live boots from iso, Lllurex from img
         if self.info.distro.name=='LliureX':
             if not self.info.target_drive.is_fat():
                  tasks = [
@@ -95,7 +95,7 @@ class Backend(object):
                  Task(self.get_diskimage,
                       description=_("Retrieving installation files")),
                  Task(self.extract_diskimage, description=_("Extracting")),
-		     	#Task(self.extract_kernel, description=_("Extracting the kernel")),
+                 #Task(self.extract_kernel, description=_("Extracting the kernel")),
                  Task(self.choose_disk_sizes, description=_("Choosing disk sizes")),
                  Task(self.expand_diskimage,
                       description=_("Expanding")),
@@ -373,21 +373,21 @@ class Backend(object):
     def cache_img_path(self):
         self.dimage_path = None
         self.dimage_path = self.find_img()
-		#if self.info.cd_distro \
-		#and self.info.distro == self.info.cd_distro \
-		#and self.info.cd_path \
-		#and os.path.isdir(self.info.cd_path):
-		#    self.cd_path = self.info.cd_path
-		#else:
-		#    self.cd_path = self.find_cd()
+        #if self.info.cd_distro \
+        #and self.info.distro == self.info.cd_distro \
+        #and self.info.cd_path \
+        #and os.path.isdir(self.info.cd_path):
+        #    self.cd_path = self.info.cd_path
+        #else:
+        #    self.cd_path = self.find_cd()
 
-		#if not self.cd_path:
-		#    if self.info.iso_distro \
-		#    and self.info.distro == self.info.iso_distro \
-		#    and os.path.isfile(self.info.iso_path):
-		#        self.iso_path = self.info.iso_path
-		#    else:
-		#        self.iso_path = self.find_iso()
+        #if not self.cd_path:
+        #    if self.info.iso_distro \
+        #    and self.info.distro == self.info.iso_distro \
+        #    and os.path.isfile(self.info.iso_path):
+        #        self.iso_path = self.info.iso_path
+        #    else:
+        #        self.iso_path = self.find_iso()
     
     def cache_cd_path(self):
         self.iso_path = None
@@ -517,7 +517,7 @@ class Backend(object):
 
         if self.iso_path \
         and os.path.exists(self.iso_path):
-			return True
+            return True
 
         if self.info.iso_path \
         and os.path.exists(self.info.iso_path):
@@ -787,13 +787,13 @@ class Backend(object):
                 title2 = "For more boot options, press `ESC' now...",
                 lliurex_mode_title = "LliureX",
                 normal_mode_title = "LliureX Live",
-			    #pae_mode_title = "PAE mode",
-			    # safe_graphic_mode_title = "Safe graphic mode",
-			    #intel_graphics_workarounds_title = "Intel graphics workarounds",
-			    #nvidia_graphics_workarounds_title = "Nvidia graphics workarounds",
-			    #acpi_workarounds_title = "ACPI workarounds",
-			    #verbose_mode_title = "Verbose mode",
-			    #demo_mode_title =  "Demo mode",
+                #pae_mode_title = "PAE mode",
+                # safe_graphic_mode_title = "Safe graphic mode",
+                #intel_graphics_workarounds_title = "Intel graphics workarounds",
+                #nvidia_graphics_workarounds_title = "Nvidia graphics workarounds",
+                #acpi_workarounds_title = "ACPI workarounds",
+                #verbose_mode_title = "Verbose mode",
+                #demo_mode_title =  "Demo mode",
             )
         else:
             isopath = ""
@@ -886,8 +886,8 @@ class Backend(object):
                 for f in os.listdir(path):
                     if f.endswith(".img"):
                         imgs.append(os.path.join(path,f))
-			#path = join_path(path, '*.img')
-			#imgs = glob.glob(path)
+            #path = join_path(path, '*.img')
+            #imgs = glob.glob(path)
             for img in imgs:
                 #for distro in self.info.distros:
                     #if distro.is_valid_iso(iso, self.info.check_arch):
@@ -915,8 +915,8 @@ class Backend(object):
                 for f in os.listdir(path):
                     if f.endswith(".iso"):
                         isos.append(os.path.join(path,f))
-			#path = join_path(path, '*.iso')
-			#isos = glob.glob(path)
+            #path = join_path(path, '*.iso')
+            #isos = glob.glob(path)
             log.debug("ISOS %s"%isos)
             for iso in isos:
                 for distro in self.info.distros:

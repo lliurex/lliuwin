@@ -438,31 +438,31 @@ class WindowsBackend(Backend):
 
     def extract_diskimage(self, associated_task=None):
         # TODO: try to pipe download stream into this.
-		if self.dimage_path.endswith(".xz"):
-			sevenzip = self.info.iso_extractor
-			xz = self.dimage_path
-			log.debug("  extracting %s" % (xz))
-			tarball = os.path.basename(self.dimage_path).strip('.xz')
-			# 7-zip needs 7z.dll to read the xz format.
-			dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
-			dec_tar = [sevenzip, 'e', '-si', '-ttar', '-o' + self.info.disks_dir]
-			dec_xz_subp = spawn_command(dec_xz)
-			dec_tar_subp = spawn_command(dec_tar, stdin=dec_xz_subp.stdout)
-			dec_xz_subp.stdout.close()
-			dec_tar_subp.communicate()
-			if dec_tar_subp.returncode != 0:
-				raise Exception, ('Extraction failed with code: %d' %
-								  dec_tar_subp.returncode)
-			# TODO: Checksum: http://tukaani.org/xz/xz-file-format.txt
-			# Only remove downloaded image
-			#if not self.info.dimage_path:
-			if os.path.exists(xz):
-				os.remove(xz)
-			self.info.dimage_path=self.info.dimage_path.replace(".tar.xz","")
+        if self.dimage_path.endswith(".xz"):
+            sevenzip = self.info.iso_extractor
+            xz = self.dimage_path
+            log.debug("  extracting %s" % (xz))
+            tarball = os.path.basename(self.dimage_path).strip('.xz')
+            # 7-zip needs 7z.dll to read the xz format.
+            dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
+            dec_tar = [sevenzip, 'e', '-si', '-ttar', '-o' + self.info.disks_dir]
+            dec_xz_subp = spawn_command(dec_xz)
+            dec_tar_subp = spawn_command(dec_tar, stdin=dec_xz_subp.stdout)
+            dec_xz_subp.stdout.close()
+            dec_tar_subp.communicate()
+            if dec_tar_subp.returncode != 0:
+                raise Exception, ('Extraction failed with code: %d' %
+                                  dec_tar_subp.returncode)
+            # TODO: Checksum: http://tukaani.org/xz/xz-file-format.txt
+            # Only remove downloaded image
+            #if not self.info.dimage_path:
+            if os.path.exists(xz):
+                os.remove(xz)
+            self.info.dimage_path=self.info.dimage_path.replace(".tar.xz","")
         root = join_path(self.info.disks_dir, 'root.disk')
         log.debug("%s copying to %s" % (self.info.dimage_path,root))
         shutil.copyfile(self.info.dimage_path, root)
-		#Set custominstall path
+        #Set custominstall path
         self.info.custominstall = join_path(self.info.install_dir, 'custom-installation')
 
     def expand_diskimage(self, associated_task=None):
@@ -487,18 +487,18 @@ class WindowsBackend(Backend):
             log.debug('Copying %s -> %s' % (src, dest))
             shutil.copytree(src, dest)
         #REM -> No need
-		#src = join_path(self.info.disks_dir, 'wubildr')
-		#shutil.copyfile(src, join_path(dest, 'wubildr'))
-		## Overwrite the copy that's in root_dir.
-		#for drive in self.info.drives:
-		#    if drive.type not in ('removable', 'hd'):
-		#        continue
-		#    dest = join_path(drive.path, 'wubildr')
-		#    try:
-		#        shutil.copyfile(src, dest)
-		#    except: # don't need to worry about failure here
-		#        pass
-		#os.unlink(src)
+        #src = join_path(self.info.disks_dir, 'wubildr')
+        #shutil.copyfile(src, join_path(dest, 'wubildr'))
+        ## Overwrite the copy that's in root_dir.
+        #for drive in self.info.drives:
+        #    if drive.type not in ('removable', 'hd'):
+        #        continue
+        #    dest = join_path(drive.path, 'wubildr')
+        #    try:
+        #        shutil.copyfile(src, dest)
+        #    except: # don't need to worry about failure here
+        #        pass
+        #os.unlink(src)
 
     def get_usb_search_paths(self):
         '''
@@ -845,7 +845,7 @@ class WindowsBackend(Backend):
                 self.info.registry_key,
                 'VistaBootDrive',
                 id)
-			#Generate switchto file
+            #Generate switchto file
             desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
             batFile = join_path(self.info.target_dir, 'switchLliurex.ps1')
             log.debug("BAT %s"%batFile)
@@ -861,8 +861,8 @@ class WindowsBackend(Backend):
                 f.write('Set oLink = oWS.CreateShortcut(sLinkFile)\n')
                 f.write('oLink.TargetPath = "powershell.exe"\n')
                 f.write('oLink.Arguments="-ExecutionPolicy Bypass -NoProfile -Command \"\"&{start-process powershell -ArgumentList \'-ExecutionPolicy Bypass -NoProfile -File %s\' -Verb RunAs}\"\""\n'%batFile)
-								
-					#			&\"& \"\"%s\"\"\""\n'%batFile)
+                                
+                    #            &\"& \"\"%s\"\"\""\n'%batFile)
                 f.write('oLink.Description = "LliureX 21"\n')
                 f.write('oLink.IconLocation = "%s"\n'%(join_path(self.info.target_dir,'LliureX.ico')))
                 f.write('oLink.Save\n')
@@ -872,10 +872,10 @@ class WindowsBackend(Backend):
             except Exception, err: #this shouldn't be fatal
                 log.error(err)
 
-		   # program_files = winshell.programs()
-			#winshell.CreateShortcut (Path=os.path.join (desktop, 'LliureX.lnk'),
-			 #  Target=r'C:\%s\lliuwin\lliuwin.exe',
-			  # Icon=r'C:\%s\lliuwin\lliuwin.exe')
+           # program_files = winshell.programs()
+            #winshell.CreateShortcut (Path=os.path.join (desktop, 'LliureX.lnk'),
+             #  Target=r'C:\%s\lliuwin\lliuwin.exe',
+              # Icon=r'C:\%s\lliuwin\lliuwin.exe')
 
             return
 
