@@ -853,7 +853,7 @@ class Backend(object):
             imgs = glob.glob(path)
             for img in imgs:
 #                if self.info.distro.is_valid_iso(iso, self.info.check_arch):
-                log.debug("Found local IMG: %s"%img)
+                log.debug("Found local compressed IMG: %s"%img)
                 return img
 
     def find_iso(self, associated_task=None):
@@ -884,7 +884,7 @@ class Backend(object):
             log.debug("Seach %s"%path)
             if os.path.isdir(path):
                 for f in os.listdir(path):
-                    if f.endswith(".img"):
+                    if f.endswith(".img") or f.endswith(".img.tar.xz"):
                         imgs.append(os.path.join(path,f))
             #path = join_path(path, '*.img')
             #imgs = glob.glob(path)
