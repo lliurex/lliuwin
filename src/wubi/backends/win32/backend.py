@@ -459,7 +459,7 @@ class WindowsBackend(Backend):
             #if not self.info.dimage_path:
             #    os.remove(xz)
             self.info.dimage_path=os.path.basename(self.info.dimage_path.replace(".tar.xz",""))
-            self.info.dimage_path=join_path(self.info_disks_dir,self.info.dimage_path)
+            self.info.dimage_path=join_path(self.info.disks_dir,self.info.dimage_path)
         root = join_path(self.info.disks_dir, 'root.disk')
         log.debug("%s copying to %s" % (self.info.dimage_path,root))
         shutil.copyfile(self.info.dimage_path, root)
