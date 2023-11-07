@@ -442,6 +442,7 @@ class WindowsBackend(Backend):
             sevenzip = self.info.iso_extractor
             xz = self.dimage_path
             log.debug("  extracting %s" % (xz))
+            log.debug("  target dir %s" % (self.info_disks_dir))
             tarball = os.path.basename(self.dimage_path).strip('.xz')
             # 7-zip needs 7z.dll to read the xz format.
             dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
@@ -456,9 +457,9 @@ class WindowsBackend(Backend):
             # TODO: Checksum: http://tukaani.org/xz/xz-file-format.txt
             # Only remove downloaded image
             #if not self.info.dimage_path:
-            if os.path.exists(xz):
-                os.remove(xz)
-            self.info.dimage_path=self.info.dimage_path.replace(".tar.xz","")
+            #    os.remove(xz)
+            self.info.dimage_path=os.path.basename(self.info.dimage_path.replace(".tar.xz",""))
+            self.info.dimage_path=join_path(self.info_disks_dir,self.info.dimage_path)
         root = join_path(self.info.disks_dir, 'root.disk')
         log.debug("%s copying to %s" % (self.info.dimage_path,root))
         shutil.copyfile(self.info.dimage_path, root)
