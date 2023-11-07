@@ -11,7 +11,6 @@ BUILD=./build
 EXE=lliuwin.exe
 mkdir ${DIST} 2>/dev/null
 cp ${BUILD}/${EXE} ${DIST}
-echo "HOLLLLL"
 msi-packager -n "$PROJECT" -v "$VERSION" -m "$DEVEL" -a "$ARCH" -u "$UPID" -i $ICO -e "$EXE" $DIST $MSI
 if [[ $? -eq 0 ]]
 then
