@@ -438,24 +438,27 @@ class WindowsBackend(Backend):
 
     def extract_diskimage(self, associated_task=None):
         # TODO: try to pipe download stream into this.
-		#sevenzip = self.info.iso_extractor
-		#xz = self.dimage_path
-		#log.debug("  extracting %s" % (xz))
-		#tarball = os.path.basename(self.dimage_path).strip('.xz')
-        # 7-zip needs 7z.dll to read the xz format.
-		#dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
-		#dec_tar = [sevenzip, 'e', '-si', '-ttar', '-o' + self.info.disks_dir]
-		#dec_xz_subp = spawn_command(dec_xz)
-		#dec_tar_subp = spawn_command(dec_tar, stdin=dec_xz_subp.stdout)
-		#dec_xz_subp.stdout.close()
-		#dec_tar_subp.communicate()
-		#if dec_tar_subp.returncode != 0:
-		#    raise Exception, ('Extraction failed with code: %d' %
-		#                      dec_tar_subp.returncode)
-        # TODO: Checksum: http://tukaani.org/xz/xz-file-format.txt
-        # Only remove downloaded image
-		#if not self.info.dimage_path:
-		#    os.remove(xz)
+		if self.dimage_path.endswith(".xz"):
+			sevenzip = self.info.iso_extractor
+			xz = self.dimage_path
+			log.debug("  extracting %s" % (xz))
+			tarball = os.path.basename(self.dimage_path).strip('.xz')
+			# 7-zip needs 7z.dll to read the xz format.
+			dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
+			dec_tar = [sevenzip, 'e', '-si', '-ttar', '-o' + self.info.disks_dir]
+			dec_xz_subp = spawn_command(dec_xz)
+			dec_tar_subp = spawn_command(dec_tar, stdin=dec_xz_subp.stdout)
+			dec_xz_subp.stdout.close()
+			dec_tar_subp.communicate()
+			if dec_tar_subp.returncode != 0:
+				raise Exception, ('Extraction failed with code: %d' %
+								  dec_tar_subp.returncode)
+			# TODO: Checksum: http://tukaani.org/xz/xz-file-format.txt
+			# Only remove downloaded image
+			#if not self.info.dimage_path:
+			if os.path.exists(xz):
+				os.remove(xz)
+			self.info.dimage_path=self.info.dimage_path.replace(".tar.xz","")
         root = join_path(self.info.disks_dir, 'root.disk')
         log.debug("%s copying to %s" % (self.info.dimage_path,root))
         shutil.copyfile(self.info.dimage_path, root)

@@ -849,6 +849,12 @@ class Backend(object):
 #                if self.info.distro.is_valid_iso(iso, self.info.check_arch):
                 log.debug("Found local IMG: %s"%img)
                 return img
+            path = join_path(path, '*.img.tar.xz')
+            imgs = glob.glob(path)
+            for img in imgs:
+#                if self.info.distro.is_valid_iso(iso, self.info.check_arch):
+                log.debug("Found local IMG: %s"%img)
+                return img
 
     def find_iso(self, associated_task=None):
         log.debug("Searching for local ISO")
