@@ -442,7 +442,7 @@ class WindowsBackend(Backend):
             sevenzip = self.info.iso_extractor
             xz = self.dimage_path
             log.debug("  extracting %s" % (xz))
-            log.debug("  target dir %s" % (self.info_disks_dir))
+            log.debug("  target dir %s" % (self.info.disks_dir))
             tarball = os.path.basename(self.dimage_path).strip('.xz')
             # 7-zip needs 7z.dll to read the xz format.
             dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
