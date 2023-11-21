@@ -19,6 +19,7 @@ function mount_img()
 {
 	if [ $MOUNT -eq 0 ]
 	then
+		mkdir $LOCAL_CHROOT 2>/dev/null
 		mount $LOCAL_IMG $LOCAL_CHROOT
 		if [[ $2 == "--enable" ]]
 		then
