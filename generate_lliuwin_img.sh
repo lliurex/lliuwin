@@ -7,7 +7,7 @@ LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
 LOCAL_IMG=/home/${SUDO_USER}/lliuwin2.img
 IMG_SIZE=11G
 RELEASE=jammy
-if [[ ! "x"$2 == "x" ]]
+if [[ ! "x"$2 == "x" ]] && [[ $2 != "--enable" ]]
 then
 	RELEASE=$2
 fi
