@@ -1,0 +1,17 @@
+#!ipxe
+set use-cached 0
+dhcp
+imgload -a -n grldr0 -t 3000 http://b.chenall.net/grldr || goto embed
+imgfree grldr
+boot grldr0 || goto failed
+
+:embed
+imgload grldr
+boot grldr || goto failed
+
+:failed
+echo Booting failed, dropping to shell
+
+:shell
+shell
+goto shell

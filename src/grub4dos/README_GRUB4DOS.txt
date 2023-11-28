@@ -1,37 +1,36 @@
-Please refer to http://grub4dos.sourceforge.net/wiki/ for DOCs on GRUB4DOS.
 
-Main project page:	https://gna.org/projects/grub4dos/
+Main project page:	https://github.com/chenall/grub4dos
 
-Download site:		http://download.gna.org/grub4dos/
-Download site:		http://grub4dos.sourceforge.net/
-Download site:		http://sarovar.org/projects/grub4dos/
-Download site:		http://grub4dos.nufans.net/
-Download site:		http://sites.google.com/site/grubdos/
-Download site:		http://grub4dos.jot.com/
+Get the latest source code
 
-Get the latest source code by using anonymous svn in this way:
-
-	svn co svn://svn.gna.org/svn/grub4dos/trunk grub4dos
-
-or in this way:
-
-	svn co http://svn.gna.org/svn/grub4dos/trunk grub4dos
+	git clone git://github.com/chenall/grub4dos.git
+or
+	svn co https://github.com/chenall/grub4dos grub4dos-src
 
 View the source code online with your web browser at:
 
-	http://svn.gna.org/viewcvs/grub4dos/trunk/
-
-GRUB4DOS mailing list:
-
-	grub4dos-devel@gna.org
-
-Subscription page:
-
-	https://mail.gna.org/listinfo/grub4dos-devel/
+	https://github.com/chenall/grub4dos
 
 Discussion forum(Official technical support site):
 
-	http://www.boot-land.net/forums/index.php?showforum=66
+	Chinese:
+	http://bbs.wuyou.com/forumdisplay.php?fid=60
+	http://bbs.znpc.net/forumdisplay.php?fid=4
+	English:
+	http://reboot.pro/forum/66/
+
+Download:  http://grub4dos.chenall.net
+Docs:	   http://grub4dos.chenall.net  http://chenall.net
+
+******************************************************************************
+***                              GCC Blacklist                             ***
+******************************************************************************
+
+It is known that gcc-4.6.x creates binaries which fails to work on certain machines.
+Source: http://bbs.wuyou.net/viewthread.php?tid=274070 [Chinese GBK]
+
+It is known that gcc-4.7.x creates binaries which fails to start memtest86.
+Source: http://bbs.wuyou.net/redirect.php?tid=180142&pid=2669810&goto=findpost#pid2669810 [Chinese GBK]
 
 ------------------------------------------------------------------------------
 
@@ -303,6 +302,9 @@ Update 8:	Added ram drive (rd). The (md) device accesses the memory
 		greater than or equal to 0x80(but should avoid using 0xffff,
 		because 0xffff is for the (md) device).
 
+		The notation (rd)+1 always represents the file which contains
+		all the bytes stored in (rd).
+
 Update 9:	Directly boot NTLDR of WinNT/2K/XP and IO.SYS of Win9x/ME and
 		KERNEL.SYS of FreeDOS. Examples:
 
@@ -353,6 +355,22 @@ Update 9:	Directly boot NTLDR of WinNT/2K/XP and IO.SYS of Win9x/ME and
 
 		Bean has successfully decompressed and booted IO.SYS of WinME.
 		Thanks for the great job!
+
+Update 10:	isolinux.bin (version 3.73) can be chainloaded as with build
+		2009-02-09.
+
+			chainloader (cd)/isolinux.bin
+
+		isolinux.bin must reside in a real or virtual cdrom.
+
+Update 11:	stage2 of Grub Legacy can be chainloaded in this way:
+
+			chainloader --force --load-segment=0 --load-offset=0x8000 --boot-cs=0 --boot-ip=0x8200 (...)/.../stage2
+
+Update 12: 	added exFAT partition.
+
+Update 13: 	add Universal Disk Format (UDF) and Joliet specification support. You can boot from them also.
+		Able to use grldr_cd.bin as cdrom boot code.
 
 --------------------------------------------------------
 
@@ -496,45 +514,27 @@ Note:	Counters for floppies and harddrives in the BIOS Data Area remain
 ***   Explanation of the grldr-bootable floppies or harddisk partitions    ***
 ******************************************************************************
 
-1. Ext2 Boot Sector/Boot Record Layout (for loading grldr)
+1. Ext2/3/4 Boot Sector/Boot Record Layout (for loading grldr)
 ------------------------------------------------------------------------------
-An EXT2/EXT3 volume can be GRUB-bootable. Copy grldr and an optional menu.lst
-to the root dir of the EXT2/EXT3 volume, and build the boot sector based on the
-fifth sector of grldr(some fields need to be changed as detailed in the
-following table). And then the EXT2/EXT3 volume is GRUB-bootable.
+An EXT2/3/4 volume can be GRUB-bootable. Copy grldr and an optional menu.lst
+to the root dir of the EXT2/3/4 volume, According to the first 3 to 4 grldr.dbr sector, 
+Create a boot sector. And then the EXT2/3/4 volume is GRUB-bootable.
 
 Update:	bootlace.com is a DOS/Linux utility that can install the GRLDR boot
-record onto the first sector of an EXT2/EXT3 volume.
+record onto the first sector of an EXT2/3/4 volume.
+
+Update: You can directly copy the boot code to the boot partition, 
+the boot code will automatically generate the head parameter.
 
 Offset	Length	Description
 ======	======	==============================================================
 00h	2	Machine code for short jump over the data.
 
-02h	1	LBA indicator. Valid values are 0x02 for CHS mode, or 0x42 for
-		LBA mode.
+02h	1	0x90
 
-		If the BIOS int13 supports LBA, this byte can be safely set to
-		0x42.
+03h	8	File system ID.  "EXT2/3/4"
 
-		Some USB BIOSes might have bugs when using CHS mode, so the
-		format program should set this byte to 0x42. It seems that
-		(generally) all USB BIOSes have LBA support.
-
-		If the format program does not know whether the BIOS has LBA
-		support, it may operate this way:
-
-		if (partition_start + total_sectors_in_partition) exceeds the
-		CHS addressing ability(especially when it is greater than
-		1024*256*63), the caller should set this byte to 0x42,
-		otherwise, set to 0x02.
-
-		Note that Windows98 uses the value 0x0e as the LBA indicator.
-
-		Update: this byte of LBA indicator is ignored. The boot
-		record can probe the LBA support of BIOS.
-
-03h	10	OEM name string (of OS which formatted the disk).
-		Update: this field is now used for error message of "I/O error"
+0Bh	2	Bytes per sector. Must be 512.
 
 0Dh	1	Sectors per block. Valid values are 2, 4, 8, 16 and 32.
 
@@ -595,23 +595,20 @@ Offset	Length	Description
 
 		The value here is equal to (s_first_data_block + 1).
 
-30h	1	code for "cld"(0xFC).
-
-31h	2	code for "xor ax,ax"(0x31, 0xC0).
-
-33h	1	code for "nop"(0x90) or "cwd"(0x99)
-
-34h	458	The rest of the machine code.
+30h	462	The rest of the machine code.
 
 1FEh	2	Boot Signature AA55h.
+
+200h	510	The rest of the machine code.
+
+3FEh	2	Boot Signature AA55h.
 
 
 2. FAT12/FAT16 Boot Sector/Boot Record Layout (for loading grldr)
 ------------------------------------------------------------------------------
 A FAT12/16 volume can be GRUB-bootable. Copy grldr and an optional menu.lst to
-the root dir of the FAT12/16 volume, and build the boot sector based on the
-fourth sector of grldr(some fields need to be changed as detailed in the
-following table). And then the FAT12/16 volume is GRUB-bootable.
+the root dir of the FAT12/16 volume, The second sector in accordance with grldr.dbr,
+Create a boot sector. And then the FAT12/16 volume is GRUB-bootable.
 
 Update:	bootlace.com is a DOS/Linux utility that can install the GRLDR boot
 record onto the boot sector of an FAT12/16 volume.
@@ -620,26 +617,7 @@ Offset	Length	Description
 ======	======	==============================================================
 00h	2	Machine code for short jump over the data.
 
-02h	1	LBA indicator. Valid values are 0x90 for CHS mode, or 0x0e for
-		LBA mode.
-
-		If the BIOS int13 supports LBA, this byte can be safely set to
-		0x0e.
-
-		Some USB BIOSes might have bugs when using CHS mode, so the
-		format program should set this byte to 0x0e. It seems that
-		(generally) all USB BIOSes have LBA support.
-
-		If the format program does not know whether the BIOS has LBA
-		support, it may operate this way:
-
-		if (partition_start + total_sectors_in_partition) exceeds the
-		CHS addressing ability(especially when it is greater than
-		1024*256*63), the caller should set this byte to 0x0e,
-		otherwise, set to 0x90.
-
-		Update: this byte of LBA indicator is ignored. The boot
-		record can probe the LBA support of BIOS.
+02h	1	0x90
 
 		Update(2006-07-31): Though GRLDR won't use this LBA-indicator
 		byte, Windows 98 uses it. Usually this byte should be 0x90 for
@@ -693,6 +671,7 @@ Offset	Length	Description
 
 		This byte is ignored for read. The boot code will write
 		partition number onto this byte. See offset 41h below.
+		Update: This field is ignored
 
 26h	1	Signature (must be 28h or 29h to be recognised by NT).
 
@@ -700,22 +679,9 @@ Offset	Length	Description
 
 2Bh	11	Volume label.
 
-36h	8	File system ID. "FAT12   ", "FAT16   " or "FAT     ".
+36h	8	File system ID. "FAT12   ", "FAT16    ※.
 
-3Eh	1	code for "cli".
-
-3Fh	1	code for "cld".
-
-40h	1	code for "mov dh, imm8".
-
-41h	1	Partition number of this partition on the boot drive.
-
-		0, 1, 2, 3 are primary partitions.
-		4, 5, 6, ... are logical partitions in the extended partition.
-
-		0xff is for whole drive. So for floppies, it should be 0xff.
-
-42h	442	The rest of the machine code.
+3Eh	446	The rest of the machine code.
 
 1FCh	4	Boot Signature AA550000h. (Win9x uses 4 bytes as magic value)
 
@@ -723,9 +689,8 @@ Offset	Length	Description
 3. FAT32 Boot Sector/Boot Record Layout (for loading grldr)
 ------------------------------------------------------------------------------
 A FAT32 volume can be GRUB-bootable. Copy grldr and an optional menu.lst to
-the root dir of the FAT32 volume, and build the boot sector based on the
-third sector of grldr(some fields need to be changed as detailed in the
-following table). And then the FAT32 volume is GRUB-bootable.
+the root dir of the FAT32 volume, The first sector in accordance with grldr.dbr,
+Create a boot sector. And then the FAT32 volume is GRUB-bootable.
 
 Update:	bootlace.com is a DOS/Linux utility that can install the GRLDR boot
 record onto the boot sector of an FAT32 volume.
@@ -734,26 +699,7 @@ Offset	Length	Description
 ======	======	==============================================================
 00h	2	Machine code for short jump over the data.
 
-02h	1	LBA indicator. Valid values are 0x90 for CHS mode, or 0x0e for
-		LBA mode.
-
-		If the BIOS int13 supports LBA, this byte can be safely set to
-		0x0e.
-
-		Some USB BIOSes might have bugs when using CHS mode, so the
-		format program should set this byte to 0x0e. It seems that
-		(generally) all USB BIOSes have LBA support.
-
-		If the format program does not know whether the BIOS has LBA
-		support, it may operate this way:
-
-		if (partition_start + total_sectors_in_partition) exceeds the
-		CHS addressing ability(especially when it is greater than
-		1024*256*63), the caller should set this byte to 0x0e,
-		otherwise, set to 0x90.
-
-		Update: this byte of LBA indicator is ignored. The boot
-		record can probe the LBA support of BIOS.
+02h	1	0x90
 
 		Update(2006-07-31): Though GRLDR won't use this LBA-indicator
 		byte, Windows 98 uses it. Usually this byte should be 0x90 for
@@ -825,6 +771,7 @@ Offset	Length	Description
 
 		This byte is ignored for read. The boot code will write
 		partition number onto this byte. See offset 5Dh below.
+		Update: This field is ignored
 
 42h	1	Signature (must be 28h or 29h to be recognised by NT).
 
@@ -834,20 +781,7 @@ Offset	Length	Description
 
 52h	8	File system ID. "FAT32   ".
 
-5Ah	1	opcode for "cli".
-
-5Bh	1	opcode for "cld".
-
-5Ch	1	opcode for "mov dh, imm8".
-
-5Dh	1	Partition number of this partition on the boot drive.
-
-		0, 1, 2, 3 are primary partitions.
-		4, 5, 6, ... are logical partitions in the extended partition.
-
-		0xff is for whole drive. So for floppies, it should be 0xff.
-
-5Eh	414	The rest of the machine code.
+5Ah	418	The rest of the machine code.
 
 1FCh	4	Boot Signature AA550000h. (Win9x uses 4 bytes as magic value)
 
@@ -855,9 +789,8 @@ Offset	Length	Description
 4. NTFS Boot Sector/Boot Record Layout (for loading grldr)
 ------------------------------------------------------------------------------
 An NTFS volume can be GRUB-bootable. Copy grldr and an optional menu.lst to
-the root dir of the NTFS volume, and build the boot sector based on the
-6th-9th sectors of grldr(some fields need to be changed as detailed in the
-following table). And then the NTFS volume is GRUB-bootable.
+the root dir of the NTFS volume, According to the first 7 to 10 grldr.dbr sector,
+Create a boot sector. And then the NTFS volume is GRUB-bootable.
 
 Update:	bootlace.com is a DOS/Linux utility that can install the GRLDR boot
 record onto the leading 4 sectors of an NTFS volume.
@@ -866,26 +799,7 @@ Offset	Length	Description
 ======	======	==============================================================
 00h	2	Machine code for short jump over the data.
 
-02h	1	LBA indicator. Valid values are 0x90 for CHS mode, or 0x0e for
-		LBA mode.
-
-		If the BIOS int13 supports LBA, this byte can be safely set to
-		0x0e.
-
-		Some USB BIOSes might have bugs when using CHS mode, so the
-		format program should set this byte to 0x0e. It seems that
-		(generally) all USB BIOSes have LBA support.
-
-		If the format program does not know whether the BIOS has LBA
-		support, it may operate this way:
-
-		if (partition_start + total_sectors_in_partition) exceeds the
-		CHS addressing ability(especially when it is greater than
-		1024*256*63), the caller should set this byte to 0x0e,
-		otherwise, set to 0x90.
-
-		Update: this byte of LBA indicator is ignored. The boot
-		record can probe the LBA support of BIOS.
+02h	1	0x90
 
 		Update(2006-07-31): Though GRLDR won't use this LBA-indicator
 		byte, Windows 98 uses it. Usually this byte should be 0x90 for
@@ -894,6 +808,7 @@ Offset	Length	Description
 		partition. This problem was reported by neiljoy. Many thanks!
 
 03h	8	OEM name string (of OS which formatted the disk).
+		Identifies the partition "NTFS
 
 0Bh	2	Bytes per sector. Must be 512.
 
@@ -944,26 +859,124 @@ Offset	Length	Description
 
 50h	4	Checksum, usually 0.
 
-54h	1	opcode for "cli".
-
-55h	1	opcode for "cld".
-
-56h	1	opcode for "mov dh, imm8".
-
-57h	1	Partition number of this partition on the boot drive.
-
-		0, 1, 2, 3 are primary partitions.
-		4, 5, 6, ... are logical partitions in the extended partition.
-
-		0xff is for whole drive. So for floppies, it should be 0xff.
-
-58h	420	The rest of the machine code in the first sector.
+54h	424	The rest of the machine code in the first sector.
 
 1FCh	4	Boot Signature AA550000h. (Win9x uses 4 bytes as magic value)
 
 200h	1536	The rest of the machine code in the last 3 sectors.
 
 ------------------------------------------------------------------------------
+
+5. exFAT boot sector / boot record of the original layout
+   exFAT boot code provided by the Fan JianYe
+------------------------------------------------------------------------------
+An exFAT volume is GRUB bootable. Copy grldr and menu.lst file available to the
+exFAT volume's root directory, According to the first 5 to 6 grldr.dbr sectors 
+to create boot sector. 
+Then the exFAT volume is GRUB bootable.
+
+Note: If you directly copy the boot code to the boot partition, You need first  
+from this partition boot
+, and automatically fill the checksum.
+Otherwise, Windows will think that the partition is not formatted.
+
+Offset	Length	Description
+======	======	==============================================================
+00h	3 	0xEB7690	Jump instruction
+03h	8 	"EXFAT   "	Signature
+	
+++++++++ The new increase ++++++++
+0bh	2    	Bytes per sector
+0dh	1    	Sectors per cluster
+0eh	4   	Data start Absolute sector
+12h	4			The current cluster the absolute sector in fat table
+16h	2    	EIOS Mark		Bit 7   EIOS
+18h	2    	Sectors per track
+1ah	2    	Number of heads
+1ch	4   	Number of hidden sectors
+20h	4   	Retention
+24h	1    	Drive numbe
+25h	1    	Partition number
+26h	2    	Retention
+28h	4   	FAT table start absolute sector number
+2ch	4   	Retention
+++++++++ The new increase ++++++++
+ 
+30h	16 	Must be 0x00
+40h	8 	Sector Address
+48h 	8	Size of total volume in sectors
+50h  	4   	Sector address of 1st FAT
+54h  	4   	Size of FAT in Sectors
+58h	4   	Sector address of the Data Region
+5ch 	4   	Number of clusters in the Cluster Heap
+60h  	4   	Cluster address of the Root Directory
+64h 	4  	Volume Serial Number
+68h 	2   	VV.MM (01.00 for this release)
+6ah 	2   	Field                   Offset  bits Size       bits Description
+ 		Active FAT              0       1               0每1st          1每2nd
+		Volume Dirty            1       1               0每Clean        1-Dirty
+		Media Failure           2       1               0每No Failures  1每Failures
+		Reported Clear to Zero  3       1               No Meaning
+		Reserved                4       12
+6ch	1	This is a power of 2. Range: min of 29 = 512 byte
+		cluster size, and a max of 212 = 4096.
+6dh  	1  	This is a power of 2. Range: Min of 21=512. The maximum Cluster size is 32 MiB,
+		so the Values in Bytes per Sector + Sectors Per Cluster cannot exceed 25.
+6eh 	1 	This number is either 1 or 2, and is only 2 if TexFAT is in use.
+6fh  	1      	Used by INT 13
+70h   	1    	Percentage of Heap in use
+71h  	7	Retention
+78h  	390  	The Boot Program
+1feh   	2   	0xAA55
+200h  	510	The Boot Program
+3feh	2	0xAA55
+
+
+6. MBR boot code in the FAT12/16/32/exFAT/EXT2 merger, take a little more than 2 sectors.
+------------------------------------------------------------------------------
+    Combined FAT12/16/32/exFAT current BPB structure:      
+    grldr.dbr self-built in the exFAT BPB structure:
+
+Offset  Type    Description
+======	======	==============================================================
+00      2    	EB 2E   Jump instruction
+
+02      1	Partition type / EIOS Mark
+
+		Bit 0   FAT12
+		Bit 1   FAT16
+		Bit 2   FAT32
+
+		Bit 3   exFAT
+
+		Bit 4   EXT2
+
+		Bit 5   Retention
+		Bit 6   EXT2  filesystem size of 2^64 blocks
+		Bit 7   EIOS
+
+03      4	Root directory
+07      4	Home directory of the absolute starting sector (fat12/16)
+0b      2	Bytes per sector
+0d      1	Sectors per cluster
+
+0e      4	Data start Absolute sector
+12      4	The current cluster the absolute sector in fat table
+16      2	File system ID  "6412"
+
+18      2	Sectors per track
+1a      2	Number of heads
+1c      4	Partiti	on start Absolute sector
+
+20      4	The total number of sectors partition
+24      1	Drive number
+25      1	Partition number
+26      2	Retention
+
+28      4	FAT table start absolute sector number
+2c      4	Root cluster  
+
+
 
 Appendix A: File System Information Sector of FAT32(not used by grldr)
 
@@ -1056,7 +1069,7 @@ Six bytes can be used to control the boot process of GRLDR.MBR.
 
 Offset	Length	Description
 ======	======	==============================================================
-02h	1	bit0=1: disable the search for GRLDR on floppy
+5ah	1	bit0=1: disable the search for GRLDR on floppy
 		bit0=0: enable the search for GRLDR on floppy
 
 		bit1=1: disable the boot of PREVIOUS MBR with invalid
@@ -1077,16 +1090,17 @@ Offset	Length	Description
 		bit7=1: try to boot PREVIOUS MBR after the search for GRLDR
 		bit7=0: try to boot PREVIOUS MBR before the search for GRLDR
 
-03h	1	timeout in seconds to wait for a key press. 0xff stands for
+5bh	1	timeout in seconds to wait for a key press. 0xff stands for
 		waiting all the time(endless).
 
-04h	2	hot-key code. high byte is scan code, low byte is ASCII code.
+5ch	2	hot-key code. high byte is scan code, low byte is ASCII code.
 		the default value is 0x3920, which stands for the space bar.
 		if this key is pressed, GRUB will be started prior to the boot
 		of previous MBR. See "int 16 keyboard scan codes" below.
 
-06h	1	preferred boot drive number, 0xff for no-drive
-07h	1	preferred partition number, 0xff for whole drive
+5eh	1	preferred boot drive number, 0xff for no-drive
+
+5fh	1	preferred partition number, 0xff for whole drive
 
 		if the preferred boot drive number is 0xff, the order of the
 		search for GRLDR will be:
@@ -1099,20 +1113,11 @@ Offset	Length	Description
 			(fd0)
 
 		otherwise, if the preferred boot drive number is Y(not equal to
-		0xff) and the preferred partition number is K, then the order of
-		the search for GRLDR will be:
-
-			(Y) if K=0xff; or (Y,K) otherwise
-			(hd0,0), (hd0,1), ..., (hd0,L),(L=max partition number) 
-			(hd1,0), (hd1,1), ..., (hd1,M),(M=max partition number)
-			... ... ... ... ... ... ... ... 
-			(hdX,0), (hdX,1), ..., (hdX,N),(N=max partition number)
-						       (X=max harddrive number)
-			(fd0)
+		0xff) and the preferred partition number is K, then search for 
+		GRLDR order and above.
 
 		Note: if Y < 0x80, then (Y) is floppy, else (Y) is harddrive,
 		      and (Y,K) is partition number K on harddrive (Y).
-
 
 ******************************************************************************
 ***        bootlace.com - Install GRLDR.MBR bootstrap code to MBR          ***
@@ -1208,38 +1213,11 @@ OPTIONS:
 	--total-sectors=C	specifies total sectors for --floppy.
 				default is 0.
 
-	--lba			use lba mode for --floppy. If the floppy BIOS
-				has LBA support, you can specify --lba here.
-				It is assumed that all floppy BIOSes have CHS
-				support. So you would rather specify --chs.
-				If neither --chs nor --lba is specified, then
-				the LBA indicator(i.e., the third byte of the
-				boot sector) will not be touched.
-
-	--chs			use chs mode for --floppy. You should specify
-				--chs if the floppy BIOS does not support LBA.
-				We assume all floppy BIOSes have CHS support.
-				So it is likely you want to specify --chs.
-				If neither --chs nor --lba is specified, then
-				the LBA indicator(i.e., the third byte of the
-				boot sector) will not be touched.
-
-	--fat12			FAT12 is allowed to be installed for --floppy.
-
-	--fat16			FAT16 is allowed to be installed for --floppy.
-
-	--fat32			FAT32 is allowed to be installed for --floppy.
-
-	--vfat			FAT12/16/32 are allowed to be installed for
-				--floppy.
-
-	--ntfs			NTFS is allowed to be installed for --floppy.
-
-	--ext2			EXT2 is allowed to be installed for --floppy.
-
 	--install-partition=I	Install the boot record onto the boot area of
 				partition number I of the specified hard drive
 				or harddrive image DEVICE_OR_FILE.
+				
+	--gpt  Install the grldr.mbr to the GPT partition type device.
 
 DEVICE_OR_FILE:	Filename of the device or the image file. For DOS, a BIOS drive
 number(hex 0xHH or decimal DDD) can be used to access the drive. BIOS drive
@@ -1251,17 +1229,17 @@ load GRLDR as the second(and last) stage of the GRUB boot process. Therefore
 GRLDR should be copied to the root directory of one of the supported
 partitions, either before or after a successful execution of BOOTLACE.COM.
 Currently only partitions with filesystem type of FAT12, FAT16, FAT32, NTFS,
-EXT2 or EXT3 are supported.
+EXT2ㄛEXT3ㄛ EXT4 or EXFAT are supported.
 
 Note 2: If DEVICE_OR_FILE is a harddisk device or a harddisk image file, it
 must contain a valid partition table, otherwise, BOOTLACE.COM will fail. If
 DEVICE_OR_FILE is a floppy device or a floppy image file, then it must contain
-a supported filesystem(i.e., either of FAT12/FAT16/FAT32/NTFS/EXT2/EXT3).
+a supported filesystem(i.e., either of FAT12/FAT16/FAT32/NTFS/EXT2/EXT3/EXT4/EXFAT).
 
 Note 3: If DEVICE_OR_FILE is a floppy device or a floppy image file, and it
-was formated EXT2/EXT3, then you should specify --sectors-per-track and
+was formated EXT2/3/4, then you should specify --sectors-per-track and
 --heads explicitly.
-
+Update: You can not specify.
 
 Important!! If you install GRLDR Boot Record to a floppy or a partition, the
 floppy or partition will boot solely grldr, and your original
@@ -1278,27 +1256,27 @@ Examples:
 
 	Installing GRLDR boot code to MBR under Linux:
 
-		bootlace.com  /dev/hda
+		bootlace.com  /dev/sda
 
 	Installing GRLDR boot code to MBR under DOS:
 
 		bootlace.com  0x80
 
-	Installing GRLDR boot code to a harddisk image under DOS or Linux:
+	Installing GRLDR boot code to a harddisk image under DOS ﹜Windows or Linux:
 
 		bootlace.com  hd.img
 
 	Installing GRLDR boot code to floppy under Linux:
 
-		bootlace.com  --floppy --chs /dev/fd0
+		bootlace.com  --floppy /dev/fd0
 
 	Installing GRLDR boot code to floppy under DOS:
 
-		bootlace.com  --floppy --chs 0x00
+		bootlace.com  --floppy 0x00
 
-	Installing GRLDR boot code to a floppy image under DOS or Linux:
+	Installing GRLDR boot code to a floppy image under DOS ﹜Windows or Linux:
 
-		bootlace.com  --floppy --chs floppy.img
+		bootlace.com  --floppy floppy.img
 
 BOOTLACE.COM cannot function well under Windows NT/2000/XP/2003. It is expected
 (and designed) to run under DOS/Win9x and Linux. Update: For image FILES,
@@ -1352,7 +1330,7 @@ and grub.exe. This may be convenient to developers who write installation or
 bootstrap or initialization programs.
 
 Certainly, grub.exe and the bootable disk image can also be loaded by a running
-GRUB or LILO or syslinux. Examples:
+GRUB, GRUB2, LILO or syslinux. Examples:
 
 1. Loaded by GRUB:
 
@@ -1360,14 +1338,25 @@ GRUB or LILO or syslinux. Examples:
 	initrd (hd0,0)/DOS.IMG
 	boot
 
-2. Loaded by LILO:
+2. Loaded by GRUB2:
+
+	g4d_cfg="map (rd) (fd0); map --hook; chainloader (fd0)+1; rootnoverify (fd0)"
+	linux (hd0,0)/grub.exe --config-file=$g4d_cfg
+	initrd (hd0,0)/DOS.IMG
+	boot
+
+	Note: The argument to --config-file must _not_ be in double quotes.
+	This implies that command lines with spaces should always be set to
+	a variable and use the variable (unquoted) as done above.
+
+3. Loaded by LILO:
 
 	image=/boot/grub.exe
 		label=grub.exe
 		initrd=/boot/DOS.IMG
 		append="--config-file=map (rd) (fd0); map --hook; chainloader (fd0)+1; rootnoverify (fd0)"
 
-3. Loaded by SYSLINUX:
+4. Loaded by SYSLINUX:
 
 	label grub.exe
 		kernel grub.exe
@@ -2114,28 +2103,15 @@ FAT12/16/32 partition and place the same copy of GRLDR and MENU.LST there.
 	of stage2. It will fail for the buggy DELL machine when stage2 is
 	accessed with LBA mode.
 
-2. Some newer machines have no int15/AH=87h support. You may encounter failure
-	when accessing a memdrive.
+2. Some buggy BIOSes won't boot bootable.iso(See above).(qemu can boot it fine)
 
-3. Some buggy BIOSes won't boot bootable.iso(See above).(qemu can boot it fine)
+3. Some newer Dell machines violently destroyed the interrupt vectors for
+	hardware IRQs and will hang the machine when running GRUB.EXE
+	from DOS. You may try again with BADGRUB.EXE.
 
-4. Some BIOSes have no int15/AH=24h(gate A20 control) support. It will
-	encounter problems with GRUB4DOS in the future.
-
-5. Some USB BIOSes have a buggy int13/AH=08h function which returns incorrect
-	geometry in CX and DH registers. They will encounter various failure.
-
-	Note: The int13/AH=08h function call is very important for the normal
-	CHS-mode int13 disk access. If there is no other way to determine the
-	geometry, a USB BIOS programmer should probe the first sector of the
-	USB storage device and give a right geometry for the int13/AH=08h call.
-	A good BIOS programmer should implement EBIOS functions for USB storage
-	devices, especially functions 41h, 42h, 43h and 48h, which are very
-	important for BIOS-based programs or systems such as GRUB and DOS.
-
-6. Reports say some newer Dell machines violently destroyed the int0d vector
-	and will cause failure or even hang the machine when running GRUB.EXE
-	from DOS.
+4. Reports say some BIOSes will function abnormally after GRUB.EXE is started
+	by kexec of Linux. Some machines reportedly hang. Some others
+	reportedly cannot access USB drives.
 
 
 ******************************************************************************
@@ -2238,7 +2214,7 @@ extended memory under DOS before running GRUB.EXE.
 
 6. fsys_xfs.c: (logical block size) bytes below 0x68000.
 
-7. geometry tune: 0x50000 - 0x5ffff.
+7. geometry tune: 0x50000 - 0x67fff.
 
 ******************************************************************************
 ***                Command-line Length about GRUB.EXE                      ***
@@ -2438,9 +2414,7 @@ Note 5: You may access the (cd) and (cdX)'es in the blocklist way. Example:
 
 	The cdrom sectors are big sectors with a size of 2048 bytes.
 
-Note 6:	The iso9660 filesystem driver has Rock-Ridge extension support, but
-	has no Joliet extension support. So you may encounter failure when
-	you attempt to read files on a Joliet CD.
+Note 6:	The iso9660 filesystem driver has Rock-Ridge extension support.
 
 Note 7: The (cd) or (cdX)'es can be booted now. Examples:
 
@@ -2659,7 +2633,7 @@ RAW default to 1. If RAW=0, `int15/ah=87h' will be used to access memdrives.
 
 RD default to 0x7F which is a floppy. If the RAM DRIVE is a hard drive image
 (with partition table in the first sector), you should set RD >= 0x80 and RD
-< 0xFF.
+< 0xA0.If the RAM DRIVE is a cdrom image, you should set 0xA0<= RD <= 0xff.
 
 	map --rd-base=ADDR
 
@@ -2757,6 +2731,30 @@ Examples:
 
 	is64bit && default 0
 	is64bit || default 1
+
+2010-11-04
+	Add new operators "|", ">" , ">>"
+Usage:
+	command1 | command2
+
+	command > file
+	or
+	command >> file
+
+Node: The file must already exist, GRUB4DOS can not create file or change the file size.
+Examples:
+	cat /test.txt > /abcd.txt
+
+2013-03-20
+	Add new operation ";;",multiple commands on one line
+Usage:
+	command1 ;; command2 ;; command..
+
+Description:
+	Execute multiple commands in sequence without error warning.
+
+2013-04-01
+	Add new operation "&;" and "|;"
 
 ******************************************************************************
 ***          Three new commands is64bit, errnum and errorcheck             ***
@@ -2947,6 +2945,7 @@ grldr as boot file.
 You may also want to load a different menu.lst for different client. GRUB4DOS
 will scan the following location for configuration file:
 
+	[/mybootdir]/menu.lst
 	[/mybootdir]/menu.lst/01-88-99-AA-BB-CC-DD
 	[/mybootdir]/menu.lst/C000025B
 	[/mybootdir]/menu.lst/C000025
@@ -2965,7 +2964,7 @@ mybootdir=tftp.
 
 If none of the above files is present, grldr will use its embeded menu.lst.
 
-This is a menu.lst to illstrate how to use files from the tftp server.
+This is a menu.lst to illustrate how to use files from the tftp server.
 
 	title Create ramdisk using map
 	map --mem (pd)/floppy.img (fd0)
@@ -3288,9 +3287,12 @@ will not produce bifurcate drives.
 GRLDR can be used as the PXE boot file on a remote/network server. The (pd)
 device is used to access files on the server. When GRLDR is booted through
 network, it will use its preset menu as the config file. However, you may use
-a "pxe detect" command, which acts the same way as PXELINUX:
+a "pxe detect" command, which acts this way:
 
-    * First, it will search for the config file using the hardware type (using
+    * First, it will search for the config file "menu.lst" in the same dir as
+      grldr.
+
+    * Second, it will search for the config file using the hardware type (using
       its ARP type code) and address, all in hexadecimal with dash separators;
       for example, for an Ethernet (ARP type 1) with address 88:99:AA:BB:CC:DD
       it would search for the filename 01-88-99-AA-BB-CC-DD. 
@@ -3303,16 +3305,17 @@ a "pxe detect" command, which acts the same way as PXELINUX:
       88:99:AA:BB:CC:DD and the IP address 192.0.2.91, it will try following
       files (in that order): 
 
-       /mybootdir/menu.lst/01-88-99-AA-BB-CC-DD
-       /mybootdir/menu.lst/C000025B
-       /mybootdir/menu.lst/C000025
-       /mybootdir/menu.lst/C00002
-       /mybootdir/menu.lst/C0000
-       /mybootdir/menu.lst/C000
-       /mybootdir/menu.lst/C00
-       /mybootdir/menu.lst/C0
-       /mybootdir/menu.lst/C
-       /mybootdir/menu.lst/default
+       /mybootdir/menu.lst
+       /mybootdir/menu/01-88-99-AA-BB-CC-DD
+       /mybootdir/menu/C000025B
+       /mybootdir/menu/C000025
+       /mybootdir/menu/C00002
+       /mybootdir/menu/C0000
+       /mybootdir/menu/C000
+       /mybootdir/menu/C00
+       /mybootdir/menu/C0
+       /mybootdir/menu/C
+       /mybootdir/menu/default
 
 You cannot directly map an image file on (pd). You must map it in memory using
 the --mem option. For example,
@@ -3349,6 +3352,21 @@ The new find syntax allows to find a device conditionally.
 
 CONDITION is a normal grub command which returns TRUE or FALSE.
 
+OPTIONS:
+	--set-root		set the current root device.
+	--set-root=DIR		set current root device and working directory to DIR.
+			please also see "Notation For The Current Root Device".
+	--ignore-cd		skip search on (cd).
+	--ignore-floppies	bypass all floppies.
+	--devices=DEVLIST	specify the search devices and order.
+		  DEVLIST	u->(ud)
+				n->(nd)
+				p->(pd)
+				h->(hdx)
+				c->(cd)
+				f->(fdx)
+				default: upnhcf
+
 	Example 1:
 
 		find
@@ -3373,7 +3391,17 @@ CONDITION is a normal grub command which returns TRUE or FALSE.
 
 	This will list all partitions with ID=0x07 and existing /ntldr.
 
+	Example 5:
+		find --set-root /ntldr
+	This will set the first device it finds to current root device.
 
+	Example 6:
+		find --set-root --devices=h /bootmgr
+	Same of Example 5.but search on hard disk only.
+
+	Example 7:
+		find --set-root --devices=h makeactive --status
+	This will set current root device to first active partition.
 
 ******************************************************************************
 ***                    How to build grldr boot images                      ***
@@ -3410,50 +3438,42 @@ CONDITION is a normal grub command which returns TRUE or FALSE.
 	cp menu.lst iso_root
 	mkisofs -R -b grldr -no-emul-boot -boot-load-size 4 -o grldr.iso iso_root
 
+Added 1: the grldr renamed grldr.bin, use UltraISO to load the boot file.
+
+Added 2: Use UltraISO to load the boot file grlgr_cd.bin, and then copy the grldr file
+	to the root directory.
 
 ******************************************************************************
 ***           Use bootlace.com to install partition boot record            ***
 ******************************************************************************
 
-Since bootlace.com has not implemented the --install-partition option, you
-need to use the already implemented --floppy=PartitionNumber option instead.
-
-Hear is a way you might want to follow:
+Method 1:
 
 Step 1. Get the boot sectors of the partition and save to a file MYPART.TMP.
-	For NTFS, you need to get the beginning 16 sectors. For other type of
-	filesystems, you only need to get one sector, but getting more sectors
-	is also ok.
+	For EXT2/3/4 partition, you need to get the start of the three sectors, 
+	for other types of file systems, you only need to obtain a sector.
 
-Step 2. Run this:
-
-	bootlace.com --floppy=Y --sectors-per-track=S --heads=H --start-sector=B --total-sectors=C --vfat --ext2 --ntfs MYPART.TMP
-
-	where we suppose MYPART.TMP is for (hdX,Y) and the partition number Y
-	should be specified as in the --floppy=Y option.
-
-	Note that for FAT12/16/32/NTFS partitions, you can omit these options:
-
-		 --sectors-per-track, --heads, --start-sector, --total-sectors,
-		 --vfat and --ext2.
-
-	For NTFS partitions, you must specify --ntfs option.
-
-	For ext2 partitions, you can omit --vfat, --ntfs and --ext2 options,
-	but other options should be specified.
+Step 2. Under DOS, Windows, these commands are executed:
+	bootlace.com --floppy= MYPART.TMP
 
 Step 3. Put MYPART.TMP back on to the boot sector(s) of your original partition
 	(hdX,Y).
 
+Method 2:
+	Executed under DOS command:
+	bootlace.com --install-partition=I K
 
-Note: Only a few file systems(FAT12/16/32/NTFS/ext2/ext3) are supported by now.
+	I is the partition number (0,1,2,3,4, ...), K is the drive letter (0x80, 0x81, ...).
+	Implementation will show the simple disk information and regional capacity, 
+	and are prompted to press "y" key to continue, press the other key to exit.
 
-Note2: Under Linux you may directly write the partition. That is to say, Step
-	1 and Step 3 are not needed. Simply use its device name instead of
-	MYPART.TMP.
+Installing GRLDR boot code to PBR under Linux:
+	bootlace.com --floppy /dev/sda1
+	
+Note: Only a few file systems(FAT12/16/32/NTFS/ext2/ext3/ext4/exfat) are supported by now.
 
-Note3: grubinst has the feature of installing grldr boot code onto a partiton
-	boot area.
+Note: grubinst has the feature of installing grldr boot code onto a
+	partition boot area.
 
 ******************************************************************************
 ***                Use a single key to select menu item                    ***
@@ -3501,18 +3521,21 @@ Steps to create triple MBR:
 2. Install grldr boot sector onto the boot sector of this partition. See
 section "Use bootlace.com to install partition boot record" above.
 
+
+Method 1: For image files
+
 3. Get 96 sectors of the drive starting at sector 0(MBR), and save to file
 MYMBR96.TMP.
 
-4. Run bootlace.com:
-
+4. Run under DOS or Windows:
 	bootlace.com MYMBR96.TMP
 
 5. Put MYMBR96.TMP back onto the drive starting at MBR(sector 0).
 
-Note: If the drive already has a triple MBR, then bootlace will cancel it
-and restore the original partition layout.
+Method 2: For the disk
 
+3. executed under DOS:
+	bootlace.com 0x80 (or 0x81, ...)
 
 ******************************************************************************
 ***                    Use 'pxe detect' in preset-menu                     ***
@@ -3543,7 +3566,608 @@ not work on your system.
 ******************************************************************************
 
 Now the preset menu holds the highest priority. It will gain control prior to
-the menu.lst on the boot device. If a 'configfile' command occurs in the menu
-init command group, then control will go to the menu.lst on the boot device.
+the menu.lst on the boot device. If a 'configfile' command(without specifying
+any file as the parameter) occurs in the menu init command group of the preset
+menu, then control will go to the menu.lst on the boot device.
+
+Note: You should better not use "configfile ANOTHER_MENU" frequently in your
+menu.lst file, because it could create infinite loop and thus hang your
+computer.
 
 
+******************************************************************************
+***                    New command 'dd' to copy files                      ***
+******************************************************************************
+
+Usage:
+
+dd if=IF of=OF [bs=BS] [count=C] [skip=IN] [seek=OUT] [buf=ADDR] [buflen=SIZE]
+
+Copy file IF to OF. BS is blocksize in bytes, default to 512. C is blocks to
+copy, default is total blocks in IF. IN specifies number of blocks to skip
+when read, default is 0. OUT specifies number of blocks to skip when write,
+default is 0. Skipped blocks are not touched. Both IF and OF must exist.
+
+Both IF and OF must have a leading device name, i.e.,  of the form `(...)'.
+You may use `()' for the current root device.
+
+dd can neither enlarge nor reduce the size of OF, the leftover tail of IF
+will be discarded. OF cannot be a gzipped file. If IF is a gzipped file,
+it will be decompressed automatically when copying.
+
+dd is dangerous, use at your own risk. To be on the safe side, you should
+only use dd to write a file in memory.
+
+In some cases when writing a file in a NTFS volume, dd might fail.
+
+If you attempt to write a device or a block file that is not in memory by
+starting dd in a menu, you will safely be refused :-) (Update: no restrictions
+now)
+
+Update: New options are implemented for user defined buffer. By default,
+the buffer is at address 0x50000, and length is 0x10000(=64KB). You cannot
+specify ADDR to be lower than 0x100000(=1MB). Besides, you must specify SIZE
+larger than 0x10000(=64KB). Normally you want ADDR >= 0x1000000(=16MB), and
+SIZE also >= 16MB. A large SIZE could speed up the progression of dd.
+
+Update 2: From 2011-10-03 on, buffer address default at 1M. Since grub4dos
+reserved 32M memory for internal use on 2011-10-20, you normally want to use
+ADDR >= 0x2000000(=32MB). Obviously you should not set ADDR and SIZE to
+conflict with code and data of grub4dos.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!!
+!!!!    Caution! Both IF and OF can be a device name which stands for     !!!!
+!!!!    all the sectors on the device. Take utmost care!                  !!!!
+!!!!______________________________________________________________________!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+******************************************************************************
+***              New command 'uuid' to identify partitions                 ***
+******************************************************************************
+
+Usage:
+
+	uuid [DEVICE] [UUID]
+
+If DEVICE is not specified, search for filesystem with UUID in all partitions
+and set the partition containing the filesystem as new root (if UUID is
+specified), or just list uuid's of all filesystems on all devices (if UUID is
+not specified). If DEVICE is specified, return true or false according to
+whether or not the DEVICE matches the specified UUID (if UUID is specified),
+or just list the uuid of DEVICE (if UUID is not specified).
+
+Example 1:
+
+	find --set-root uuid () 7f95820f-5e33-4e6c-8f50-0760bf06d79c
+
+which will find a partition with uuid=7f95820f-5e33-4e6c-8f50-0760bf06d79c
+and set the partition as root if found.
+
+Example 2:
+
+	uuid ()
+
+which will print the uuid of the current root device.
+
+
+******************************************************************************
+***                     gfxmenu support in grub4dos                        ***
+******************************************************************************
+
+Gfxmenu support has been added to grub4dos. To use it, you must first find the
+message file you need, then load it in menu.lst with command like this:
+
+	gfxmenu /message
+
+This should be a gloabl command, that is, not inside any menu item. Also, it
+can only be used in configure file, running it in console mode does not work.
+
+gfxmenu does not work in conjunction with the password feature.
+
+There are two major format of message file. Old format is created with gfxboot
+3.2.* or older (size of message file is normally about 150K), while new format
+is created with gfxboot 3.3.* and later (size of message file is normally above
+300K). Both format are supported in grub4dos.
+
+
+******************************************************************************
+***           Use 'write' to write a string into a device or file          ***
+******************************************************************************
+
+Usage:
+
+	write [--offset=SKIP] [--bytes=N] ADDR_OR_FILE INTEGER_OR_STRING
+
+SKIP is an integer and defaults to 0.
+
+If ADDR_OR_FILE is an integer, then it is treated as a memory address, and
+INTEGER_OR_STRING must be an integer value. The integer INTEGER_OR_STRING (Max bytes N)
+will be written to address (ADDR_OR_FILE + SKIP).
+
+14-08-12 Update: By default, Write 32-bit integers.can use --bytes to change.
+Examples:
+    write --bytes=1 0x8308 0x10      ** rewrite only one byte at address 0x8308.
+    write 0x8308 0x10                ** will rewrite  0x8308 - 0x830b 4-byte.
+    write --bytes=8 0x8308 0x10      ** will rewrite  0x8308 - 0x830F 8-byte.
+
+If ADDR_OR_FILE is a device or a file, then INTEGER_OR_STRING is treated as
+a string which will be written to ADDR_OR_FILE at offset SKIP (in bytes).
+
+14-08-12 Update: now can use --bytes parameter limits the number of bytes to be written.
+Examples: ** only write 12345678
+    write --bytes=8 (md) 0x300 + 1 12345678abcdef
+
+The string is quoted with nothing, that is, neither with the single quote
+char(') nor with the double quote char(").
+
+Space char must be quoted with back slash(\). (Update: need not now)
+
+Single quote char(') and double quote char(") are not interpreted specially
+and can be used directly in the string.
+
+Some C-style quote sequences are interpreted as follows:
+
+	\NNN	character with octal value NNN (1 to 3 digits)
+
+	\\	backslash
+
+	\a	alert (BEL)
+
+	\b	backspace
+
+	\f	form feed
+
+	\n	new line
+
+	\r	carriage return
+
+	\t	horizontal tab
+
+	\v	vertical tab
+
+	\xHH	byte with hexadecimal value HH (1 to 2 digits)
+
+Just like dd, the write can neither enlarge nor reduce the size of the
+destination file, the leftover tail of the string will be discarded.
+The destination file cannot be a gzipped file.
+
+Again like dd, the write command is also dangerous, use at your own risk.
+And to be on the safe side, you should only write to memory files.
+
+In some cases when writing a file in a NTFS volume, the write might fail.
+
+If you attempt to write a device or a block file that is not in memory by
+using write in a menu, you will safely be refused :-) (Update: no restrictions
+now)
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!!
+!!!!    Caution! The file to write can be a device name which stands      !!!!
+!!!!    for all the sectors on the device. Take utmost care!              !!!!
+!!!!______________________________________________________________________!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+******************************************************************************
+***                 Item-by-item help text for menu entries                ***
+******************************************************************************
+
+
+The help message at the bottom of the screen will vary as you choose the menu.
+
+You may append your help text to the title line. The help text must begin
+with "\n", for example:
+
+	title This is the title\nThis is the help text.\nAnd this is the 2nd line of the help text.
+
+Some C-style quote sequences are interpreted as stated in the section above.
+
+
+******************************************************************************
+***        initrd can load multiple cpio files for Linux 2.6 kernels       ***
+******************************************************************************
+
+Usage:
+
+	initrd FILE [FILE ...]
+
+Note 1: You should not load more than one oldstyle disk images in this way,
+because this is not supported by Linux kernel.
+
+Note 2: The FILEs should be specified in the same order as with syslinux.
+
+******************************************************************************
+***            access some internel variables at a fixed location          ***
+******************************************************************************
+
+Address		Length		Description
+=========	========	==============================================
+0000:8208	4 (DWORD)	install_partition (the boot partition)
+0000:8280	4 (DWORD)	boot_drive (the boot drive)
+0000:8284	4 (DWORD)	pxe_yip (your ip)
+0000:8288	4 (DWORD)	pxe_sip (server ip)
+0000:828C	4 (DWORD)	pxe_gip (gateway ip)
+0000:8290	8 (QWORD)	filesize (file size by last "cat --length=0")
+0000:8298	4 (DWORD)	Starting from 1M contiguous memory block size (size in KB)
+0000:829C	4 (DWORD)	saved_partition (current root partition)
+0000:82A0	4 (DWORD)	saved_drive (current root drive)
+0000:82A4	4 (DWORD)	no_decompression (no auto gunzip)
+0000:82A8	8 (QWORD)	part_start (start sector of last partition)
+0000:82B0	8 (QWORD)	part_length (total sectors of last partition)
+0000:82B8	4 (DWORD)	UD Partition: Number of heads,Sectors per track,
+				Real BIOS drive number, Maximum Sectors per track(low bit)
+0000:82c0	8 (QWORD)	Starting from 4G contiguous memory block size (size in KB)
+
+Note 1: Filesize can be initialised/modified by using "cat --length=0 FILE".
+Note 2: You should not write these variables by hand(should read only).
+Note 3: You may use 1K at 6000:0000 for your own varibles(See note 4).
+Note 4: The read command now returns the integer value at the given address.
+Note 5: Grub4dos does not have the variable expansion feature. You can only
+	use integer variables. You need not declare them, but use the memory
+	address directly. Usually you want to use variables as a logical
+	value or in a command for conditional test, e.g., of this form:
+		 "checkrange RANGE read ADDR"
+Note 6: no_decompression, saved_drive and saved_partition are writable.
+
+
+******************************************************************************
+***            possibility to run another menu.lst after gfxmenu           ***
+******************************************************************************
+
+Notice the use of CONFIGFILE after GFXMENU in the following example:
+
+	# The menu.lst file for gfxmenu
+	default=0
+	timeout=5
+	gfxmenu /message
+	configfile /another.lst
+	title 0..........
+	................
+	title 1..........
+	................
+	title 2..........
+	................
+	# End of menu.lst
+
+	# Begin another.lst
+	default=0
+	timeout=5
+	title 0..........
+	................
+	title 1..........
+	................
+	title 2..........
+	................
+	# End of another.lst
+
+This will try gfxmenu command first. On exit(or on failure) control will go
+to another.lst file.
+
+
+******************************************************************************
+***                   a range of drives can be unmapped                    ***
+******************************************************************************
+
+Usage:
+
+	map --unmap=RANGE
+
+RANGE is a range of BIOS drive numbers to be unmapped. BIOS drive number 0
+is for the first floppy, 1 is for the second floppy; 0x80 is for the first
+hard drive, 0x81 is for the second hard drive, etc; virtual cdrom (hd32)
+corresponds to BIOS drive number 0xA0, (hd33) corresponds to 0xA1, etc.
+
+For description on RANGE, please refer to section `The New Command CHECKRANGE'
+above.
+
+Example 1:
+
+	map --unmap=0,0x80,0xff
+
+This will unmap virtual floppy (fd0), virtual hard drive (hd0) and virtual
+cdrom (0xff).
+
+Example 2:
+
+	map --unmap=0:0xff
+
+This will unmap all virtual floppies, all virtual hard drives and all virtual
+cdroms.
+
+Note 1: Normally a `map' command will add an item in the drive map table for
+	a virtual drive. But `--unmap' means items in the drive map table
+	(for the specified virtual drives) will be deleted.
+Note 2:	The --unhook option only breaks the INT13 hook(to the inerrupt
+	vector table). It will not affect the drive map table. And later on
+	execution of a `boot' command, the INT13 disk emulation routine will
+	automatically get hooked(to the interrupt vector table) when needed
+	(e.g., the drive map table is non-empty) even if it has been unhooked.
+Note 3: Usually you want to do a `map --rehook' after you have changed the
+	drive map table.
+
+
+******************************************************************************
+***                         geometry tune and sync                         ***
+******************************************************************************
+
+When a USB storage device is connected to a (or another) machine, the geometry
+in the partition table or in the BPB of the volume could be invalid, and the
+machine could hang at boot time. So you need to find out the correct geometry
+for the drive (use `geometry --tune'), and then update the geometry in
+partition table and BPB of the drive(use `geometry --sync').
+
+The above steps are required if you are going to boot DOS, because DOS
+requires the right geometry in the partition table and BPB. Windows/Linux may
+also require it, since the boot process could run in real-mode.
+
+
+******************************************************************************
+***                            Version numbering                           ***
+******************************************************************************
+
+Now we append a letter 'a', 'b', 'c' or 'p' to the version number(e.g., 0.4.5).
+So the version will become 0.4.5a, 0.4.5b, 0.4.5c, 0.4.5 or 0.4.5p.
+
+'a' - alpha test. unstable, especially when there are known bugs.
+'b' - beta test. the developers think it has no bugs and want a widely testing.
+'c' - release candidate.
+''(nothing) - official release.
+'p' - patched versions to the official release.
+
+
+******************************************************************************
+***                          Running User Programs                         ***
+******************************************************************************
+
+From 0.4.5 on, user programs can be developed for running under grub4dos. The
+executable program file must end with the 8-byte grub4dos EXEC signature:
+
+		0x05, 0x18, 0x05, 0x03, 0xBA, 0xA7, 0xBA, 0xBC
+
+The executable must have no relocations, and the entry point is at the very
+beginning of the file, just like a DOS .com file(but the grub4dos executable
+is 32-bit).
+
+Here is a sample file echo.c:
+
+/*================ begin echo.c ================*/
+
+/*
+ * compile:			
+
+ gcc -Wl,--build-id=none -m32 -mno-sse -nostdlib -fno-zero-initialized-in-bss -fno-function-cse -fno-jump-tables -Wl,-N -fPIE echo.c -o echo.o
+
+ * disassemble:			objdump -d echo.o
+ * confirm no relocation:	readelf -r echo.o
+ * generate executable:		objcopy -O binary echo.o echo
+ *
+ * and then the resultant echo will be grub4dos executable.
+ */
+
+/*
+ * This is a simple ECHO command, running under grub4dos.
+ */
+
+int i = 0x66666666;	/* this is needed, see the following comment. */
+
+/* gcc treat the following as data only if a global initialization like the
+ * above line occurs.
+ */
+
+/* a valid executable file for grub4dos must end with these 8 bytes */
+asm(".long 0x03051805");
+asm(".long 0xBCBAA7BA");
+/* thank goodness gcc will place the above 8 bytes at the end of the b.out
+ * file. Do not insert any other asm lines here.
+ */
+
+int
+main()
+{
+        void *p = &main;
+
+	return
+	/* the following line is calling the grub_sprintf function. */
+	((int (*)(char *, const char *, ...))((*(int **)0x8300)[0]))
+	/* the following line includes arguments passed to grub_sprintf. */
+		(0, p - (*(int *)(p - 8)));
+}
+
+/*================  end  echo.c ================*/
+
+0x8300 is a pointer to the grub4dos system funtions(API). The system_functions
+variable is defined in asm.S.
+
+More function can use in user programs:
+	http://grubutils.googlecode.com/svn/trunk/src/include/grub4dos.h
+note: After 2010-11-16 version of grub4dos,you can use like below.
+/////////////////echo.c start///////////////////////////////////////////////
+#define sprintf ((int (*)(char *, const char *, ...))((*(int **)0x8300)[0]))
+
+#define printf(...) sprintf(NULL, __VA_ARGS__)
+int i = 0x66666666;
+asm(".long 0x03051805");
+asm(".long 0xBCBAA7BA");
+int main(char *arg,int flags)
+{
+
+	return printf("%s\n",arg);
+}
+/////////////////echo.c end/////////////////////////////////////////////////
+
+******************************************************************************
+***                      Map options added by Karyonix                     ***
+******************************************************************************
+
+(from boot-land.net) Karyonix's note:
+
+map --add-mbt= option to be used with --mem. If =0 master boot track will not
+	be added automatically.
+map --top option to be used with --mem. map --mem will try to allocate memory
+	at highest available address.
+map --mem-max=, map --mem-min options to be used before map --mem. Allow user
+	to manually limit range of address that map --mem can use.
+
+safe_parse_maxint_with_suffix function parses K,M,G,T suffix after number.
+
+
+******************************************************************************
+***                 Graphics mode 6A: 800x600 with 16 colors               ***
+******************************************************************************
+
+Graphics mode now has 2 possibilities, one is the default 640x480 mode, and the
+other is 800x600 mode.
+
+To enter 800x600 mode, follow this way:
+
+1. Be sure you are in console text mode. You may execute "terminal console".
+2. Set graphics mode to 0x6A by using command "graphicsmode 0x6A".
+3. Enter graphics mode. You may execute command "terminal graphics".
+
+To return to 640x480 mode, follow this way:
+
+1. Be sure you are in console text mode. You may execute "terminal console".
+2. Set graphics mode to 0x12 by using command: "graphicsmode 0x12".
+3. Enter graphics mode. You may execute command "terminal graphics".
+
+****************************************************************************** 
+*****			GRUB4DOS variable support			 *****
+****************************************************************************** 
+
+From now we supports variables, the same usage of MSDOS. 
+
+commands: 
+	set [/p] [/a|/A] [/l|/u] [VARIABLE=[STRING]]
+	variable specifies the variable name (up to 8 characters). 
+	string Specifies a string assigned to the variable (up to 512 characters.) 
+
+SET command without parameters will display the current variables. 
+
+with "=",if the string is empty.
+	set myvar= 
+Will delete the variable myvar
+
+Show the name has been used for all variable. For example: 
+	set ex_ 
+Will display all variables beginning with ex_, returns 0 if no match. 
+
+Note:	1. the same of MSDOS.
+	   a full line of command will be conducted before the implementation of variable substitution. 
+	2. Variable names must beginning with letter or "_".
+	   Otherwise you will not be able to access your variables.
+	3. See the previous description for length limit. 
+	3. To reset all used variable enter command "set *"
+
+the new command if
+	if [/I] [NOT] STRING1==STRING2 [COMMAND]
+	if [NOT] exist VARIABLE|FILENAME [COMMAND]
+
+	STRING1==STRING2
+	   Specifies a true condition if the specified text strings match.
+	COMMAND
+	   Specifies the command to carry out if the condition is met.
+	/I
+	   if specified, says to do case insensitive string compares.
+	NOT
+	   Specifies that should carry out the command only if the condition is false.
+
+Example: 
+	1. To determine whether strings are equal, and not case sensitive. 
+		if /i test==%myvar% echo this is a test
+	2. To determine the character is empty.
+		if %myvar%#==# echo variable myvar not defined.
+Usage example: 
+	1. Displays a string including the variable. 
+		echo myvar=%myvar% 
+	2. Using a variable instead of command. 
+		set print = echo 
+		%print% This a test.
+	3. You can use a "^" to stop extended, example 
+		echo %myvar^% 
+	  Or 
+		echo %my^var% 
+	  Will be displayed %myvar% rather than the extended character after myvar. 
+Note: We only deal the ^ between the symbols %%. 
+
+****************************************************************************** 
+*****			GRUB4DOS batch scripting support		 ***** 
+****************************************************************************** 
+
+The new version supports running a batch script,It very like MS-DOS batch.
+Yes!you needn't to learn a new language.
+
+Example of a simple script: 
+	========= GRUB4DOS BATCH SCRIPT START =============================== 
+	!BAT #Note: The file header !BAT is necessary to identify this is a batch
+	echo %0 
+	echo Your type:%1 %2 %3 %4 %5 %6 %7 %8 %9 
+	call :Label1 This is a test string 
+	goto :label2 
+	:Label1 
+	echo %1 %2 %3 %4 %5 %6 %7 %8 %9 
+	goto :eof 
+	:Label2 
+	echo end of batch script. 
+	========= GRUB4DOS BATCH SCRIPT END =============================== 
+
+Some differences: 
+	1. Batch will stop when an error occurs. 
+	2. Use command "exit 1",if you need to stop a running batch script.
+	3. %9 refers to all the remaining parameters. 
+	5. extensions
+		%~d0	expands %0 to a drive letter.e.g: (hd0,0) ,()
+		%~p0	expands %0 to a path only
+		%~n0	expands %0 to a file name only
+		%~x0	expands %0 to a file extension only
+		%~f0	expands %0 to a fully qualified path name
+		%~z0	expands %0 to size of file
+	6.You can find some script in below site.
+	  http://chenall.net/post/tag/grub4dos/
+
+********************************************************************************
+			Conditional Menu(iftitle)
+********************************************************************************
+Conditional menu are support since 2011-12-04, it can determine to display a menu item by specified condition.
+For distinguishing from normal menu item, it uses new keyword "iftitle".
+
+commands:
+	iftitle [<command>] Actual Title displayed\nOptional help line
+
+Note:
+	1.command must be a valid GRUB4DOS command, it supports calling external commands.
+	Note: commands like eecho/pause are disabled in conditional menu.
+	    Almost all commands are useable, and you may report bug if you encounter unusable commands.
+	2.a space before menu title is necessary.
+	3.[] is necessary.
+	4.If it is empty inside [], it acts same as title command.
+	5.You can use this function to comment out a menu item by putting invalid command inside [].
+
+******************************************************************************
+***                           About usb2.0 driver                         ***
+******************************************************************************
+GRLDR includes usb2.0 drive.
+
+The USB 2.0 driver supports: PCI Device Class 0c/03/20,
+namely EHCI (Enhanced Host Controller Interface) devices.
+
+The USB 2.0 driver supports: USB (Universal Serial Bus) Class 08 (Mass Storage devices),
+SubClass 06, Protocol 50, that is USB Thumbdrive or Portable External Hard Drives.
+
+Support USB-FDD, USB-HDD, USB-cdrom mode.
+
+In the menu or the command line to load usb2.0 driver: usb --init
+Optional parameters: usb --delay=P
+P is controlled transmission delay index. 0=General; 1=2*General; 2=4*General; 3=8*General
+
+Tips: 1. Some USB drives are identified as USB 1.x devices under Windows or DOS usbaspi.sys , 
+         However, the device will re-identified as usb2.0 delay after the increase.
+      2. Some USB drives do not be detected when plugging into front panel,
+         However, the increase will be identified after delay.
+      3. When loading failure, Select --delay=P parameter try.
+
+
+2014-03-19
+There are fragments of the file emulation support up to 32 segments.

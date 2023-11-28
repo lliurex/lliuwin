@@ -157,11 +157,7 @@ struct minix_dir_entry {
 #define PATH_MAX                1024	/* include/linux/limits.h */
 #define MAX_LINK_COUNT             5	/* number of symbolic links to follow */
 
-#ifndef GRUB_UTIL
 static char *linkbuf = (char *)(FSYS_BUF - PATH_MAX);	/* buffer for following symbolic links */
-#else
-static char linkbuf[PATH_MAX];	/* buffer for following symbolic links */
-#endif
 
 /* check filesystem types and read superblock into memory buffer */
 int
@@ -172,12 +168,12 @@ minix_mount (void)
 //      && ! IS_PC_SLICE_TYPE_BSD_WITH_FS (current_slice, FS_OTHER))
 //    return 0;			/* The partition is not of MINIX type */
   
-  if (part_length < (SBLOCK +
+  if ((unsigned long)part_length < (SBLOCK +
 		     (sizeof (struct minix_super_block) / DEV_BSIZE)))
     return 0;			/* The partition is too short */
   
   if (!devread (SBLOCK, 0, sizeof (struct minix_super_block),
-		(char *) SUPERBLOCK))
+		(unsigned long long)(unsigned int)(char *) SUPERBLOCK, 0xedde0d90))
     return 0;			/* Cannot read superblock */
   
   switch (SUPERBLOCK->s_magic)
@@ -200,7 +196,7 @@ static int
 minix_rdfsb (int fsblock, int buffer)
 {
   return devread (fsblock * (BLOCK_SIZE / DEV_BSIZE), 0,
-		  BLOCK_SIZE, (char *) buffer);
+		  BLOCK_SIZE, (unsigned long long)(unsigned int)(char *) buffer, 0xedde0d90);
 }
 
 /* Maps LOGICAL_BLOCK (the file offset divided by the blocksize) into
@@ -249,8 +245,8 @@ minix_block_map (int logical_block)
 }
 
 /* read from INODE into BUF */
-unsigned long
-minix_read (char *buf, unsigned long len)
+unsigned long long
+minix_read (unsigned long long buf, unsigned long long len, unsigned long write)
 {
   unsigned long logical_block;
   unsigned long offset;
@@ -278,12 +274,12 @@ minix_read (char *buf, unsigned long len)
 
       disk_read_func = disk_read_hook;
 
-      devread (map * (BLOCK_SIZE / DEV_BSIZE),
-	       offset, size, buf);
+      devread (map * (BLOCK_SIZE / DEV_BSIZE), offset, size, buf, write);
 
       disk_read_func = NULL;
 
-      buf += size;
+      if (buf)
+	buf += size;
       len -= size;	/* len always >= 0 */
       filepos += size;
       ret += size;
@@ -374,14 +370,16 @@ minix_dir (char *dirname)
 	  //len = 0;
 	  //while (dirname[len] && !isspace (dirname[len]))
 	  //  len++;
-	  for (len = 0; (ch = dirname[len]) && !isspace (ch); len++)
+	  for (len = 0; (ch = dirname[len]) /*&& !isspace (ch)*/; len++)
 	  {
+#if 0
 		if (ch == '\\')
 		{
 			len++;
 			if (! (ch = dirname[len]))
 				break;
 		}
+#endif
 	  }
 
 	  /* Get the symlink size. */
@@ -401,7 +399,7 @@ minix_dir (char *dirname)
 	  linkbuf[filemax + len] = '\0';
 
 	  /* Read the necessary blocks, and reset the file pointer. */
-	  len = grub_read (linkbuf, filemax);
+	  len = grub_read ((unsigned long long)(unsigned int)linkbuf, filemax, 0xedde0d90);
 	  filepos = 0;
 	  if (!len)
 	    return 0;
@@ -458,14 +456,16 @@ minix_dir (char *dirname)
       /* skip to next slash or end of filename (space) */
 //      for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/';
 //	   rest++);
-      for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/'; rest++)
+      for (rest = dirname; (ch = *rest) /*&& !isspace (ch)*/ && ch != '/'; rest++)
       {
+#if 0
 	if (ch == '\\')
 	{
 		rest++;
 		if (! (ch = *rest))
 			break;
 	}
+#endif
       }
 
       /* look through this directory and find the next filename component */
@@ -540,8 +540,10 @@ minix_dir (char *dirname)
 	      {
 		if (! (ch1 = dp->name[j]))
 			break;
+#if 0
 		if (ch1 == ' ')
 			tmp_name[k++] = '\\';
+#endif
 		tmp_name[k++] = ch1;
 	      }
 	      tmp_name[k] = 0;
@@ -550,15 +552,13 @@ minix_dir (char *dirname)
 	      //dp->name[namelen] = 0;
 	      str_chk = substring (dirname, tmp_name, 0);
 
-# ifndef STAGE1_5
 	      if (print_possibilities && ch != '/'
 		  && (!*dirname || str_chk <= 0))
 		{
 		  if (print_possibilities > 0)
 		    print_possibilities = -print_possibilities;
-		  print_a_completion (tmp_name);
+		  print_a_completion (tmp_name, 0);
 		}
-# endif
 
 	      //dp->name[namelen] = saved_c;
 	    }

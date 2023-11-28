@@ -29,15 +29,11 @@
 static char input_buf[8];
 static int npending = 0;
 
-static int serial_x;
-static int serial_y;
-
 static int keep_track = 1;
 
 
 /* Hardware-dependent definitions.  */
 
-#ifndef GRUB_UTIL
 /* The structure for speed vs. divisor.  */
 struct divisor
 {
@@ -187,7 +183,6 @@ serial_hw_init (unsigned short port, unsigned int speed,
   
   return 1;
 }
-#endif /* ! GRUB_UTIL */
 
 
 /*		Table of Serial Terminal Escape Sequences
@@ -352,8 +347,8 @@ serial_checkkey (void)
 }
 
 /* The serial version of grub_putchar.  */
-void
-serial_putchar (int c)
+unsigned int
+serial_putchar (unsigned int c, unsigned int max_width)
 {
   /* Keep track of the cursor.  */
   if (keep_track)
@@ -400,40 +395,41 @@ serial_putchar (int c)
       switch (c)
 	{
 	case '\r':
-	  serial_x = 0;
+	  fontx = 0;
 	  break;
 	  
 	case '\n':
-	  serial_y++;
+	  fonty++;
 	  break;
 	  
 	case '\b':
 	case 127:
-	  if (serial_x > 0)
-	    serial_x--;
+	  if (fontx > 0)
+	    fontx--;
 	  break;
 	  
 	case '\a':
 	  break;
 	  
 	default:
-	  if (serial_x >= 79)
+	  if (fontx >= 79)
 	    {
-	      serial_putchar ('\r');
-	      serial_putchar ('\n');
+	      serial_putchar ('\r', max_width);
+	      serial_putchar ('\n', max_width);
 	    }
-	  serial_x++;
+	  fontx++;
 	  break;
 	}
     }
   
   serial_hw_put (c);
+  return 1;
 }
 
 int
 serial_getxy (void)
 {
-  return (serial_x << 8) | serial_y;
+  return (fonty << 8) | fontx;
 }
 
 void
@@ -443,8 +439,8 @@ serial_gotoxy (int x, int y)
   ti_cursor_address (x, y);
   keep_track = 1;
   
-  serial_x = x;
-  serial_y = y;
+  fontx = x;
+  fonty = y;
 }
 
 void
@@ -454,7 +450,7 @@ serial_cls (void)
   ti_clear_screen ();
   keep_track = 1;
   
-  serial_x = serial_y = 0;
+  fontx = fonty = 0;
 }
 
 void

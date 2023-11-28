@@ -49,7 +49,7 @@ vstafs_mount (void)
   
   if( /*(((current_drive & 0x80) || (current_slice != 0))
        && current_slice != PC_SLICE_TYPE_VSTAFS)
-      ||*/  ! devread (0, 0, BLOCK_SIZE, (char *) FSYS_BUF)
+      ||*/  ! devread (0, 0, BLOCK_SIZE, (unsigned long long)(unsigned int)(char *) FSYS_BUF, 0xedde0d90)
       ||  FIRST_SECTOR->fs_magic != 0xDEADFACE)
     retval = 0;
   
@@ -59,7 +59,7 @@ vstafs_mount (void)
 static void 
 get_file_info (int sector)
 {
-  devread (sector, 0, BLOCK_SIZE, (char *) FILE_INFO);
+  devread (sector, 0, BLOCK_SIZE, (unsigned long long)(unsigned int)(char *) FILE_INFO, 0xedde0d90);
 }
 
 static int curr_ext, current_direntry, current_blockpos;
@@ -80,7 +80,7 @@ vstafs_readdir (long sector)
   
   blocks = FILE_INFO->blocks;
   curr_ext = 0;
-  devread (blocks[curr_ext].a_start, 0, 512, (char *) DIRECTORY_BUF);
+  devread (blocks[curr_ext].a_start, 0, 512, (unsigned long long)(unsigned int)(char *) DIRECTORY_BUF, 0xedde0d90);
   current_direntry = 11;
   current_blockpos = 0;
   
@@ -102,7 +102,7 @@ vstafs_nextdir (void)
       if (curr_ext < FILE_INFO->extents)
 	{
 	  devread (blocks[curr_ext].a_start + current_blockpos, 0,
-		   512, (char *) DIRECTORY_BUF);
+		   512, (unsigned long long)(unsigned int)(char *) DIRECTORY_BUF, 0xedde0d90);
 	}
       else
 	{
@@ -138,14 +138,16 @@ vstafs_dir (char *dirname)
       while (*dirname == '/') dirname++;
       //fn = dirname;
       //while ((ch = *fn) && ch != '/' && ! isspace (ch)) fn++;
-      for (fn = dirname; (ch = *fn) && ch != '/' && !isspace (ch); fn++)
+      for (fn = dirname; (ch = *fn) && ch != '/' /*&& !isspace (ch)*/; fn++)
       {
+#if 0
 	if (ch == '\\')
 	{
 		fn++;
 		if (! (ch = *fn))
 			break;
 	}
+#endif
       }
       *fn = 0;
       
@@ -153,11 +155,7 @@ vstafs_dir (char *dirname)
 	{
 	  int j, k;
 	  char ch1;
-#ifdef GRUB_UTIL
-	  char tmp_name[512];
-#else
 	  char *tmp_name = NAME_BUF;	/* MAXNAMLEN is 255, so 512 byte buffer is needed. */
-#endif
 
 	  if (d->name[0] == 0/* || d->name[0] & 0x80*/)
 	    continue;
@@ -167,23 +165,22 @@ vstafs_dir (char *dirname)
 	  {
 		if (! (ch1 = d->name[j]))
 			break;
+#if 0
 		if (ch1 == ' ')
 			tmp_name[k++] = '\\';
+#endif
 		tmp_name[k++] = ch1;
 	  }
 	  tmp_name[k] = 0;
 
-#ifndef STAGE1_5
 	  if (print_possibilities && ch != '/'
 	      && (! *dirname || strcmp (dirname, tmp_name) <= 0))
 	    {
 	      if (print_possibilities > 0)
 		print_possibilities = -print_possibilities;
 	      
-	      //printf ("  %s", d->name);
-	      print_a_completion (tmp_name);
+	      print_a_completion (tmp_name, 0);
 	    }
-#endif
 	  if (! grub_strcmp (dirname, tmp_name))
 	    {
 	      f_sector = d->start;
@@ -200,7 +197,7 @@ vstafs_dir (char *dirname)
 	{
 	  if (print_possibilities < 0)
 	    {
-	      putchar ('\n');
+	      putchar ('\n', 255);
 	      return 1;
 	    }
 	  
@@ -213,15 +210,15 @@ vstafs_dir (char *dirname)
   return 1;
 }
 
-unsigned long 
-vstafs_read (char *addr, unsigned long len)
+unsigned long long
+vstafs_read (unsigned long long buf, unsigned long long len, unsigned long write)
 {
   //struct alloc *blocks;
   unsigned long size, ret = 0, offset, curr_len = 0;
   //int curr_ext;
   char extent;
   unsigned long ext_size;
-  char *curr_pos;
+  //char *curr_pos;
   
   get_file_info (f_sector);
   size = FILE_INFO->len-VSTAFS_START_DATA;
@@ -256,13 +253,12 @@ vstafs_read (char *addr, unsigned long len)
       curr_len = blocks[0].a_len * 512 - offset;
     }
   
-  curr_pos = addr;
+  //curr_pos = buf;
   if (curr_len > len)
     curr_len = len;
   
-  for (curr_ext=extent;
-       curr_ext < FILE_INFO->extents; 
-       curr_len = blocks[curr_ext].a_len * 512, curr_pos += curr_len, curr_ext++)
+  curr_ext = extent;
+  while (curr_ext < FILE_INFO->extents) 
     {
       ret += curr_len;
       size -= curr_len;
@@ -272,8 +268,14 @@ vstafs_read (char *addr, unsigned long len)
 	  curr_len += size;
 	}
       
-      devread (blocks[curr_ext].a_start,offset, curr_len, curr_pos);
+      disk_read_func = disk_read_hook;
+      devread (blocks[curr_ext].a_start, offset, curr_len, buf, write);
+      disk_read_func = NULL;
       offset = 0;
+      curr_len = blocks[curr_ext].a_len * 512;
+      if (buf)
+	buf += curr_len;
+      curr_ext++;
     }
   
   return ret;

@@ -52,12 +52,8 @@ static struct jfs_info jfs;
 #define iNode		((dinode_t *)((char *)FSYS_BUF + 8192 + sizeof(dinode_t)))
 #define dtRoot		((dtroot_t *)(&iNode->di_xtroot))
 
-#ifndef GRUB_UTIL
 static char *linkbuf = (char *)(FSYS_BUF - JFS_PATH_MAX);	/* buffer for following symbolic links */
 static char *namebuf = (char *)(FSYS_BUF - JFS_PATH_MAX - JFS_NAME_MAX - 1);
-#else
-static char namebuf[JFS_NAME_MAX + 1], linkbuf[JFS_PATH_MAX];
-#endif
 
 static ldtentry_t de_always[2] = {
 	{1, -1, 2, {'.', '.'}},
@@ -83,7 +79,7 @@ first_extent (dinode_t *di)
 	} else {
 		do {
 			devread (addressXAD (jfs.xad) << jfs.bdlog, 0,
-				 sizeof(xtpage_t), (char *)xtPage);
+				 sizeof(xtpage_t), (unsigned long long)(unsigned int)(char *)xtPage, 0xedde0d90);
 			jfs.xad = &xtPage->xad[2];
 		} while (!(xtPage->header.flag & BT_LEAF));
 		jfs.xlastindex = xtPage->header.nextindex;
@@ -98,7 +94,7 @@ next_extent (void)
 	if (++jfs.xindex < jfs.xlastindex) {
 	} else if (xtPage->header.next) {
 		devread (xtPage->header.next << jfs.bdlog, 0,
-			 sizeof(xtpage_t), (char *)xtPage);
+			 sizeof(xtpage_t), (unsigned long long)(unsigned int)(char *)xtPage, 0xedde0d90);
 		jfs.xlastindex = xtPage->header.nextindex;
 		jfs.xindex = XTENTRYSTART;
 		jfs.xad = &xtPage->xad[XTENTRYSTART];
@@ -126,9 +122,9 @@ di_read (u32 inum, dinode_t *di)
 		offset = offsetXAD (xad);
 		if (isinxt (key, offset, lengthXAD (xad))) {
 			devread ((addressXAD (xad) + key - offset) << jfs.bdlog,
-				 3072 + xd*sizeof(pxd_t), sizeof(pxd_t), (char *)&pxd);
+				 3072 + xd*sizeof(pxd_t), sizeof(pxd_t), (unsigned long long)(unsigned int)(char *)&pxd, 0xedde0d90);
 			devread (addressPXD (&pxd) << jfs.bdlog,
-				 ioffset, DISIZE, (char *)di);
+				 ioffset, DISIZE, (unsigned long long)(unsigned int)(char *)di, 0xedde0d90);
 			break;
 		}
 	} while ((xad = next_extent ()));
@@ -151,7 +147,7 @@ next_dentry (void)
 			return &de[(int)stbl[jfs.sindex++]];
 		} else if (dtPage->header.next) {
 			devread (dtPage->header.next << jfs.bdlog, 0,
-				 sizeof(dtpage_t), (char *)dtPage);
+				 sizeof(dtpage_t), (unsigned long long)(unsigned int)(char *)dtPage, 0xedde0d90);
 			jfs.slastindex = dtPage->header.nextindex;
 			jfs.sindex = 1;
 			return &de[(int)((s8 *)&de[(int)dtPage->header.stblindex])[0]];
@@ -183,7 +179,7 @@ first_dentry (void)
 		xd = &((idtentry_t *)dtr->slot)[(int)dtr->header.stbl[0]].xd;
 		for (;;) {
 			devread (addressPXD (xd) << jfs.bdlog, 0,
-				 sizeof(dtpage_t), (char *)dtPage);
+				 sizeof(dtpage_t), (unsigned long long)(unsigned int)(char *)dtPage, 0xedde0d90);
 			if (dtPage->header.flag & BT_LEAF)
 				break;
 			xd = &de[(int)((s8 *)&de[(int)dtPage->header.stblindex])[0]].xd;
@@ -219,12 +215,12 @@ jfs_mount (void)
 {
 	struct jfs_superblock super;	/* struct size = 160 */
 
-	if (part_length < MINJFS >> SECTOR_BITS
+	if ((unsigned long)part_length < MINJFS >> SECTOR_BITS
 	    || !devread (SUPER1_OFF >> SECTOR_BITS, 0,
-			 sizeof(struct jfs_superblock), (char *)&super)
+			 sizeof(struct jfs_superblock), (unsigned long long)(unsigned int)(char *)&super, 0xedde0d90)
 	    || (super.s_magic != JFS_MAGIC)
 	    || !devread ((AITBL_OFF >> SECTOR_BITS) + FILESYSTEM_I,
-			 0, DISIZE, (char*)fileSet)) {
+			 0, DISIZE, (unsigned long long)(unsigned int)(char*)fileSet, 0xedde0d90)) {
 		return 0;
 	}
 
@@ -235,8 +231,8 @@ jfs_mount (void)
 	return 1;
 }
 
-unsigned long
-jfs_read (char *buf, unsigned long len)
+unsigned long long
+jfs_read (unsigned long long buf, unsigned long long len, unsigned long write)
 {
 	struct xad *xad;
 	s64 endofprev, endofcur;
@@ -257,22 +253,35 @@ jfs_read (char *buf, unsigned long len)
 
 			disk_read_func = disk_read_hook;
 			devread (addressXAD (xad) << jfs.bdlog,
-				 filepos - (offset << jfs.l2bsize), toread, buf);
+				 filepos - (offset << jfs.l2bsize), toread, buf, write);
 			disk_read_func = NULL;
 
-			buf += toread;
+			if (buf)
+				buf += toread;
 			len -= toread;		/* len always >= 0 */
 			filepos += toread;
 		} else if (offset > endofprev) {
 			toread = ((offset << jfs.l2bsize) >= endpos)
 				  ? len : ((offset - endofprev) << jfs.l2bsize);
-			len -= toread;
 			filepos += toread;
-			for (; toread; toread--) {
-				*buf++ = 0;
+#if 0
+			{
+				unsigned long tmp_pos = toread;
+				for (; tmp_pos; tmp_pos--) {
+					if (buf)
+						*(buf++) = 0;
+				}
 			}
-			if (len + toread < toread)
+#else
+			if (buf)
+			{
+				grub_memset64 (buf, 0, toread);
+				buf += toread;
+			}
+#endif
+			if (len <= toread)
 				break;
+			len -= toread;
 			continue;
 		}
 		endofprev = offset + xadlen; 
@@ -313,7 +322,7 @@ jfs_dir (char *dirname)
 			} else if (di_size < JFS_PATH_MAX - 1) {
 				filepos = 0;
 				filemax = di_size;
-				n = jfs_read (linkbuf, filemax);
+				n = jfs_read ((unsigned long long)(unsigned int)linkbuf, filemax, 0xedde0d90);
 			} else {
 				errnum = ERR_FILELENGTH;
 				return 0;
@@ -344,14 +353,16 @@ jfs_dir (char *dirname)
 		for (; *dirname == '/'; dirname++);
 
 		//for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/'; rest++);
-		for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/'; rest++)
+		for (rest = dirname; (ch = *rest) /*&& !isspace (ch)*/ && ch != '/'; rest++)
 		{
+#if 0
 			if (ch == '\\')
 			{
 				rest++;
 				if (! (ch = *rest))
 					break;
 			}
+#endif
 		}
 
 		*rest = 0;
@@ -380,14 +391,12 @@ jfs_dir (char *dirname)
 			}
 
 			cmp = (!*dirname) ? -1 : substring (dirname, namebuf, 0);
-#ifndef STAGE1_5
 			if (print_possibilities && ch != '/'
 			    && cmp <= 0) {
 				if (print_possibilities > 0)
 					print_possibilities = -print_possibilities;
-				print_a_completion (namebuf);
+				print_a_completion (namebuf, 0);
 			} else
-#endif
 			if (cmp == 0) {
 				parent_inum = inum;
 				inum = de->inumber;
@@ -415,7 +424,7 @@ jfs_embed (unsigned long *start_sector, unsigned long needed_sectors)
 	if (needed_sectors > 63
 	    || !devread (SUPER1_OFF >> SECTOR_BITS, 0,
 			 sizeof (struct jfs_superblock),
-			 (char *)&super)
+			 (unsigned long long)(unsigned int)(char *)&super, 0xedde0d90)
 	    || (super.s_magic != JFS_MAGIC)) {
 		return 0;
 	}

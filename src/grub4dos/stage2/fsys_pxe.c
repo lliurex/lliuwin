@@ -22,17 +22,56 @@
 #include "shared.h"
 #include "filesys.h"
 #include "pxe.h"
+#include "ipxe.h"
 
-#include "etherboot.h"
+#if !defined(__constant_htonl)
+#define __constant_htonl(x) \
+        ((unsigned long int)((((unsigned long int)(x) & 0x000000ffU) << 24) | \
+                             (((unsigned long int)(x) & 0x0000ff00U) <<  8) | \
+                             (((unsigned long int)(x) & 0x00ff0000U) >>  8) | \
+                             (((unsigned long int)(x) & 0xff000000U) >> 24)))
+#endif
+#if !defined(__constant_htons)
+#define __constant_htons(x) \
+        ((unsigned short int)((((unsigned short int)(x) & 0x00ff) << 8) | \
+                              (((unsigned short int)(x) & 0xff00) >> 8)))
+#endif
 
-#ifdef GRUB_UTIL
+#define ntohl(x) \
+(__builtin_constant_p(x) ? \
+ __constant_htonl((x)) : \
+ __swap32(x))
+#define htonl(x) \
+(__builtin_constant_p(x) ? \
+ __constant_htonl((x)) : \
+ __swap32(x))
+#define ntohs(x) \
+(__builtin_constant_p(x) ? \
+ __constant_htons((x)) : \
+ __swap16(x))
+#define htons(x) \
+(__builtin_constant_p(x) ? \
+ __constant_htons((x)) : \
+ __swap16(x))
 
-int pxe_mount (void) { return 0; }
-unsigned long pxe_read (char *buf, unsigned long len) { return -1; }
-int pxe_dir (char *dirname) { return 0; }
-void pxe_close (void) {}
+static inline unsigned long int __swap32(unsigned long int x)
+{
+	__asm__("xchgb %b0,%h0\n\t"
+		"rorl $16,%0\n\t"
+		"xchgb %b0,%h0"
+		: "=q" (x)
+		: "0" (x));
+	return x;
+}
 
-#else
+static inline unsigned short int __swap16(unsigned short int x)
+{
+	__asm__("xchgb %b0,%h0"
+		: "=q" (x)
+		: "0" (x));
+	return x;
+}
+
 
 #ifndef TFTP_PORT
 #define TFTP_PORT	69
@@ -45,8 +84,16 @@ void pxe_close (void) {}
 
 #define DOT_SIZE	1048576
 
-#define PXE_BUF		FSYS_BUF
-#define PXE_BUFLEN	FSYS_BUFLEN
+/* PXE_BUF must be in low memory */
+//#define PXE_BUF		FSYS_BUF
+//#define PXE_BUFLEN	FSYS_BUFLEN
+/* use disk buffer for PXE_BUF */
+#define PXE_BUF		BUFFERADDR
+#if (BUFFERLEN >= 0x10000)
+#define PXE_BUFLEN	0xFE00
+#else
+#define PXE_BUFLEN	BUFFERLEN
+#endif
 
 //#define PXE_DEBUG	1
 
@@ -54,17 +101,39 @@ unsigned long pxe_entry = 0, pxe_blksize = 512 /*PXE_MAX_BLKSIZE*/;
 unsigned short pxe_basemem, pxe_freemem;
 unsigned long pxe_keep;
 
-IP4 pxe_yip, pxe_sip, pxe_gip;
-UINT8 pxe_mac_len, pxe_mac_type;
+//IP4 pxe_yip, pxe_sip, pxe_gip;
+grub_u8_t pxe_mac_len, pxe_mac_type;
 MAC_ADDR pxe_mac;
-static UINT8 pxe_tftp_opened;
+static grub_u8_t pxe_tftp_opened;
 static unsigned long pxe_saved_pos, pxe_cur_ofs, pxe_read_ofs;
 
-static PXENV_TFTP_OPEN_t pxe_tftp_open;
+extern PXENV_TFTP_OPEN_t pxe_tftp_open;	/* now it is defined in asm.S */
 static char *pxe_tftp_name;
 
 extern unsigned long ROM_int15;
+extern unsigned long ROM_int13;
+extern unsigned long ROM_int13_dup;
 extern struct drive_map_slot bios_drive_map[DRIVE_MAP_SIZE + 1];
+
+static int pxe_open (char* name);
+grub_u32_t pxe_read_blk (grub_u32_t buf, grub_u32_t num);
+
+static int tftp_open(const char *dirname);
+static grub_u32_t tftp_get_size(void);
+static grub_u32_t tftp_read_blk (grub_u32_t buf, grub_u32_t num);
+static void tftp_close (void);
+static void tftp_unload(void);
+
+s_PXE_FILE_FUNC tftp_file_func = {tftp_open,tftp_get_size,tftp_read_blk,tftp_close,tftp_unload};
+
+grub_u32_t cur_pxe_type = 0;
+grub_u32_t def_pxe_type = 0;
+s_PXE_FILE_FUNC *pxe_file_func[2]={
+	&tftp_file_func,
+	#ifdef FSYS_IPXE
+	&ipxe_file_func,
+	#endif
+};
 
 static char* pxe_outhex (char* pc, unsigned char c)
 {
@@ -86,44 +155,108 @@ static char* pxe_outhex (char* pc, unsigned char c)
   return pc;
 }
 
-static unsigned long pxe_read_blk (unsigned long buf, int num);
+grub_u32_t pxe_read_blk (grub_u32_t buf, grub_u32_t num)
+{
+	grub_u32_t ret = pxe_file_func[cur_pxe_type]->readblk(buf,num);
+	return ret;
+}
 
+
+/*
+   return 0 for seccess, 1 for failure
+*/
 static int try_blksize (int tmp)
 {
 	unsigned long nr;
 
+#ifdef FSYS_IPXE
+	if (cur_pxe_type == PXE_FILE_TYPE_IPXE) return 0;
+#endif
 	pxe_blksize = tmp;
-	grub_printf ("\nTry block size %d ...\n", pxe_blksize);
-	if ((tmp = pxe_dir (pxe_tftp_name)))
+	printf_debug0 ("\nTry block size %d ...\n", pxe_blksize);
+	nr = 0;
+	tmp = pxe_open(pxe_tftp_name);
+
+	if (!tmp)
 	{
-	    if (filemax <= pxe_blksize)
-	    {
-		grub_printf ("\nFailure: Size %d too small.\n", filemax);
-	        pxe_close ();
+		printf_debug0 ("\nFailure: bootfile not found.\n");
 		return 1;
-	    }
-	    nr = pxe_read_blk (PXE_BUF, 1);
-	    if (nr == PXE_ERR_LEN)
-	    {
-		grub_printf ("\nFailure: Cannot read the first block.\n");
-	        pxe_close ();
-		return 1;
-	    }
-	    if (pxe_blksize != nr && filemax > nr && nr <= PXE_MAX_BLKSIZE && nr >= PXE_MIN_BLKSIZE)
-	    {
-		grub_printf ("\npxe_blksize tuned from %d to %d\n", pxe_blksize, nr);
-		pxe_blksize = nr;
-	    }
-	    grub_printf ("\nUse block size %d\n", pxe_blksize);
-	    pxe_close ();
-	    return 0;
 	}
-	return 1;	/* return 0 for seccess, 1 for failure */
+
+	if (filemax <= pxe_blksize)
+	{
+		printf_debug0 ("\nFailure: Size %ld too small.\n", filemax);
+		pxe_close ();
+		return 1;
+	}
+
+	nr = pxe_read_blk (PXE_BUF, 1);
+
+	if (nr == PXE_ERR_LEN)
+	{
+		printf_debug0 ("\nFailure: Cannot read the first block.\n");
+		pxe_close ();
+		return 1;
+	}
+
+	if (pxe_blksize != nr && filemax >= nr && nr <= PXE_MAX_BLKSIZE && nr >= PXE_MIN_BLKSIZE)
+	{
+		printf_debug0 ("\npxe_blksize tuned from %d to %d\n", pxe_blksize, nr);
+		pxe_blksize = nr;
+	}
+
+	printf_debug0 ("\nUse block size %d\n", pxe_blksize);
+
+	pxe_close ();
+	return 0;
 }
 
-unsigned long pxe_inited = 0;	/* pxe_detect only run once */
-unsigned long pxe_restart_config = 0;
+//unsigned long pxe_inited = 0;	/* pxe_detect only run once */
+static unsigned long config_already_restarted = 0;
+static unsigned long server_is_dos = 0;
 BOOTPLAYER *discover_reply = 0;
+
+static void set_basedir(char *config)
+{
+	unsigned long n;
+	grub_u8_t path_sep = (cur_pxe_type == PXE_FILE_TYPE_TFTP && server_is_dos) ? '\\' : '/';
+	n = grub_strlen (config);
+
+	if (n > 126)
+	{
+		printf_warning("Warning! base name(%d chars) too long (> 126 chars).\n", n);
+		n = 126;
+		config[n] = 0;
+	}
+
+	if (*config != path_sep)
+	{
+		#ifdef FSYS_IPXE
+		char *ch = strstr(config,":");
+		if (has_ipxe && ch && (grub_u32_t)(ch - config) < 10)
+		{
+			pxe_tftp_name = (char*)&pxe_tftp_open.FileName;
+			cur_pxe_type = def_pxe_type = PXE_FILE_TYPE_IPXE;
+		}
+		else
+		{
+			if (cur_pxe_type == PXE_FILE_TYPE_TFTP)
+		#endif
+				pxe_tftp_name = (char*)&pxe_tftp_open.FileName;
+			*pxe_tftp_name++ = path_sep;
+		#ifdef FSYS_IPXE
+		}
+		#endif
+	}
+
+	grub_memmove(pxe_tftp_name, config, n);
+
+	while (n >= 0) if (pxe_tftp_name[--n] == path_sep) break;
+
+	pxe_tftp_name += n;
+}
+
+static void print_ip (IP4 ip);
 
 int pxe_detect (int blksize, char *config)	//void pxe_detect (void)
 {
@@ -137,23 +270,67 @@ int pxe_detect (int blksize, char *config)	//void pxe_detect (void)
   if (! pxe_entry)	//if (! pxe_scan ())
     return 0;
 
-  pxe_inited = 1;
+//  pxe_inited = 1;
+// for proxyDHCP compatible and auto reset sip/gip with pxe_detect
+  if (discover_reply->sip)
+	pxe_sip = discover_reply->sip;
+  if (discover_reply->gip)
+	pxe_gip = discover_reply->gip;
+  else
+  {//get route gateway
+	grub_u8_t *p = discover_reply->vendor.d;
+	if (*(long*)p == 0x63538263)//DHCP magic cookie 99.130.83.99
+	{
+		for(i=4;i<BOOTP_DHCPVEND;i += p[i] + 1)
+		{
+			grub_u8_t code = p[i++];
+			if (!code || code == '\xff')
+				break;
+			if (code == '\x3')//Router Option
+			{
+				pxe_gip = *(IP4*)(p + i + 1);
+				break;
+			}
+		}
+	}
+  }
+
+#ifdef FSYS_IPXE
+  if (blksize == IPXE_PART)
+  {
+	if (*config == '(')
+	{
+		config = grub_strstr(config,"/");
+		if (!config) return 0;
+		++config;
+	}
+
+	set_basedir(config);
+
+	return 1;
+  }
+#endif
+
+  if (!pxe_sip && cur_pxe_type == PXE_FILE_TYPE_TFTP) return 0;//pxe server not found?
 
   if (discover_reply->bootfile[0])
     {
-	int n;
+	unsigned long n;
 
-	grub_printf ("\nbootfile is %s\n", discover_reply->bootfile);
-	n = grub_strlen ((char*)discover_reply->bootfile) - 1;
-	grub_strcpy ((char*)&pxe_tftp_open.FileName, (char*)discover_reply->bootfile);
-	while ((n >= 0) && (pxe_tftp_open.FileName[n] != '/')) n--;
-	if (n < 0)	/* need to add a slash */
+	for (n = 0; n < 127; n++)
 	{
-		pxe_tftp_open.FileName[0] = '/';
-		grub_strcpy (((char*)&pxe_tftp_open.FileName) + 1, (char*)discover_reply->bootfile);
-		n = 0;
+		if (discover_reply->bootfile[n] == '\\')
+		{
+			server_is_dos = 1;
+			break;
+		}
 	}
-	pxe_tftp_name = (char*)&pxe_tftp_open.FileName[n];
+
+	grub_printf("\nBoot Server: ");
+	print_ip(pxe_sip);
+	grub_printf("\tBoot File: %s\n", discover_reply->bootfile);
+
+	set_basedir((char*)discover_reply->bootfile);
 
 	/* read the boot file to determine the block size. */
 
@@ -162,7 +339,7 @@ int pxe_detect (int blksize, char *config)	//void pxe_detect (void)
 	else if (try_blksize (1408) && try_blksize (512))
 	{
 		pxe_blksize = 512;	/* default to 512 */
-		grub_printf ("\nCannot open %s, pxe_blksize set to %d\n", pxe_tftp_name, pxe_blksize);
+		printf_warning ("Warning! Cannot open bootfile. pxe_blksize set to default 512.\n");
 	}
 
       //grub_strcpy (pxe_tftp_name, "/menu.lst/");
@@ -170,7 +347,7 @@ int pxe_detect (int blksize, char *config)	//void pxe_detect (void)
   else
     {
 	pxe_blksize = (blksize ? blksize : 512);	/* default to 512 */
-	grub_printf ("\nNo bootfile! pxe_blksize set to %d\n", pxe_blksize);
+	printf_warning ("\nNo bootfile! pxe_blksize set to %d\n", pxe_blksize);
 	pxe_tftp_name = (char*)&pxe_tftp_open.FileName[0];
     }
 
@@ -178,21 +355,54 @@ int pxe_detect (int blksize, char *config)	//void pxe_detect (void)
 
   ret = 0;
 
+  grub_memcpy ((char *) saved_pxe_mac, (char *) pxe_mac, 6);
+  saved_pxe_ip = pxe_yip;
+
   if (config)
   {
-	if (*config == '/')
+	if ((ret = grub_open(config)))
 	{
-		grub_strcpy (pxe_tftp_name, config);
-		grub_printf ("%s\n", pxe_tftp_open.FileName);
-		ret = pxe_dir (pxe_tftp_name);
+		set_basedir(config);
+		grub_close();
 		goto done;
 	}
 	return 1;
   }
 
-  grub_strcpy (pxe_tftp_name, "/menu.lst/");
+	//if (pxe_dir ("/menu.lst"))
+	//{
+	//	grub_strcpy (pxe_tftp_name, "/menu.lst");
+	//	ret = 1;
+	//	goto done;
+	//}
 
-  pc = pxe_tftp_name + 10;
+	grub_strcpy (pxe_tftp_name, "/menu.lst");
+	#if 0
+	grub_printf ("\nFrom now on, we first try to open this FILE: %s\n"
+		     "\nCaution: The PXE server should NOT have a DIR of \"%s\"."
+		     "\nCaution: The system could hang if \"%s\" is a DIR."
+		     "\nCaution: Your original \"menu.lst\" DIR should be renamed to \"menu\".\n"
+			, pxe_tftp_open.FileName
+			, pxe_tftp_open.FileName
+			, pxe_tftp_open.FileName);
+	#endif
+	ret = pxe_dir (pxe_tftp_name);
+	if (ret && filemax)
+		goto done;
+	if (pxe_tftp_open.Status != PXENV_STATUS_TFTP_FILE_NOT_FOUND)//bad server
+		goto done;
+  /* Reports from Ruymbeke: opening /menu.lst will hang if it is a dir.
+   * Do NOT use /menu.lst as a dir any more!! Use /menu for it instead.
+   */
+	if (!config)
+		config = "/menu.lst/";
+
+  grub_strcpy (pxe_tftp_name, config);
+	
+//#define MENU_DIR_NAME_LENGTH (sizeof("/menu.lst/") - 1)
+	int MENU_DIR_NAME_LENGTH = grub_strlen(config);
+
+  pc = pxe_tftp_name + MENU_DIR_NAME_LENGTH;
   pc = pxe_outhex (pc, pxe_mac_type);
   for (i = 0; i < pxe_mac_len; i++)
     {
@@ -207,7 +417,7 @@ int pxe_detect (int blksize, char *config)	//void pxe_detect (void)
       goto done;
     }
 
-  pc = pxe_tftp_name + 10;
+  pc = pxe_tftp_name + MENU_DIR_NAME_LENGTH;
   tmp = pxe_yip;
   for (i = 0; i < 4; i++)
     {
@@ -223,32 +433,45 @@ int pxe_detect (int blksize, char *config)	//void pxe_detect (void)
           ret = 1;
           goto done;
         }
-      *(--pc) = 0;
-    } while (pc > pxe_tftp_name + 10);
+//	if (checkkey() == 0x11b) break;
+    if (checkkey() != (int)-1)
+      if (getkey() == 0x11b) break;
+        *(--pc) = 0;
+    } while (pc > pxe_tftp_name + MENU_DIR_NAME_LENGTH);
   grub_strcpy (pc, "default");
   grub_printf ("%s\n", pxe_tftp_open.FileName);
   ret = pxe_dir (pxe_tftp_name);
 
+#undef MENU_DIR_NAME_LENGTH
+
 done:
 
-  if (ret)
+  if (ret && filemax)
     {
 #if 1
 	char *new_config = config_file;
-	char *filename = (char *)pxe_tftp_open.FileName;
-
+	char *filename = pxe_tftp_name;
+	if (debug > 1)
+	{
+		printf_debug("\rPXE boot configfile:%s\n",(char *)pxe_tftp_open.FileName);
+		DEBUG_SLEEP
+	}
 	pxe_close ();
 	/* got file name. put it in config_file */
 	if (grub_strlen (filename) >= ((char *)0x8270 - new_config))
 		return ! (errnum = ERR_WONT_FIT);
 	/* set (pd) as root device. */
 	saved_drive = PXE_DRIVE;
-	saved_partition = 0xFFFFFF;
+	saved_partition = current_partition;
 	/* Copy FILENAME to CONFIG_FILE.  */
 	while ((*new_config++ = *filename++) != 0);
 	if (pxe_restart_config == 0)
 	{
-		pxe_restart_config = 1;
+		if (config_already_restarted == 0)
+		{
+			pxe_restart_config = 1;
+			config_already_restarted = 1;
+		}
 		return ret;
 	}
 	use_config_file = 1;
@@ -259,7 +482,7 @@ done:
 	buf_drive = -1;	/* invalidate disk cache. */
 	buf_track = -1;	/* invalidate disk cache. */
 	saved_entryno = 0;
-	force_cdrom_as_boot_device = 0;
+	//force_cdrom_as_boot_device = 0;
 	boot_drive = saved_drive;
 	install_partition = saved_partition;
 	current_drive = GRUB_INVALID_DRIVE;
@@ -268,9 +491,23 @@ done:
 	boot_part_addr = 0;
 	current_slice = 0;
 
-	/* Restart pre_stage2.  */
-	(*(char *)0x8205) |= 2;	/* disable keyboard intervention */
-	chain_stage1(0, 0x8200, boot_part_addr);
+	///* Restart pre_stage2.  */
+	//(*(char *)0x8205) |= 2;	/* disable keyboard intervention */
+	//chain_stage1(0, 0x8200, boot_part_addr);
+#if 0
+	/* Restart cmain.  */
+	asm volatile ("movl $0x7000, %esp");	/* set stack to STACKOFF */
+#ifdef HAVE_ASM_USCORE
+	asm volatile ("call _cmain");
+	asm volatile ("jmp _stop");
+#else
+	asm volatile ("call cmain");
+	asm volatile ("jmp stop");
+#endif
+#else
+  cmain();  //适应gcc高版本  2=23-05-24
+#endif
+
 	/* Never reach here.  */
 #else
       unsigned long nr;
@@ -301,109 +538,59 @@ done:
   return ret;
 }
 
-#if PXE_TFTP_MODE
-
 static int pxe_reopen (void)
 {
   pxe_close ();
-
-  pxe_call (PXENV_TFTP_OPEN, &pxe_tftp_open);
-  if (pxe_tftp_open.Status)
-  {
-    return 0;
-  }
-  pxe_blksize = pxe_tftp_open.PacketSize;
-  pxe_saved_pos = pxe_cur_ofs = pxe_read_ofs = 0;
-
-  pxe_tftp_opened = 1;
-
-  return 1;
+  pxe_tftp_opened = pxe_file_func[cur_pxe_type]->open(pxe_tftp_name);
+  return pxe_tftp_opened;
 }
 
 static int pxe_open (char* name)
 {
-  PXENV_TFTP_GET_FSIZE_t *tftp_get_fsize;
+	if (name != pxe_tftp_name)
+	{
+		grub_strcpy (pxe_tftp_name, name);
 
-  pxe_close ();
+		if (cur_pxe_type == PXE_FILE_TYPE_TFTP && server_is_dos)
+		{
+			unsigned long n;
+			for (n = 0; n < 128; n++)
+			{
+				if (pxe_tftp_open.FileName[n] == '/')
+					pxe_tftp_open.FileName[n] = '\\';
+			}
+		}
+		name = pxe_tftp_name;
+	}
 
-  tftp_get_fsize = (void*)&pxe_tftp_open;
-  tftp_get_fsize->ServerIPAddress = pxe_sip;
-  tftp_get_fsize->GatewayIPAddress = pxe_gip;
-
-  if (name != pxe_tftp_name)
-    grub_strcpy (pxe_tftp_name, name);
-
-  pxe_call (PXENV_TFTP_GET_FSIZE, tftp_get_fsize);
-
-  if (tftp_get_fsize->Status)
-  {
-    pxe_tftp_opened = 0;
-    pxe_saved_pos = pxe_cur_ofs = pxe_read_ofs = 0;
-    return 0;
-  }
-
-  filemax = tftp_get_fsize->FileSize;
-
-  pxe_tftp_open.TFTPPort = htons (TFTP_PORT);
-  pxe_tftp_open.PacketSize = pxe_blksize;
-
-  return pxe_reopen ();
+	pxe_close ();
+	/*
+	We always use pxe_tftp_open.FileName for full file path.
+	name is a relative path.
+	*/
+	pxe_tftp_opened = pxe_file_func[cur_pxe_type]->open(name);
+	if (!pxe_tftp_opened)
+	{
+		if ((unsigned long)debug >= 0x7FFFFFFF) printf("Err: %d\n",pxe_tftp_open.Status);
+		return 0;
+	}
+	if (pxe_file_func[cur_pxe_type]->getsize())
+		return 1;
+	pxe_close ();
+	return (pxe_tftp_opened = 0);
 }
 
 void pxe_close (void)
 {
-  if (pxe_tftp_opened)
-    {
-      PXENV_TFTP_CLOSE_t tftp_close;
-
-      pxe_call (PXENV_TFTP_CLOSE, &tftp_close);
-      pxe_tftp_opened = 0;
-      pxe_saved_pos = pxe_cur_ofs = pxe_read_ofs = 0;
-    }
+	if (pxe_tftp_opened)
+	{
+		pxe_file_func[cur_pxe_type]->close();
+		pxe_saved_pos = pxe_cur_ofs = pxe_read_ofs = 0;
+		pxe_tftp_opened = 0;
+	}
 }
 
-#if PXE_FAST_READ
-
-/* Read num packets , BUF must be segment aligned */
-static unsigned long pxe_read_blk (unsigned long buf, int num)
-{
-  PXENV_TFTP_READ_t tftp_read;
-  unsigned long ofs;
-
-  tftp_read.Buffer = SEGOFS(buf);
-  ofs = tftp_read.Buffer & 0xFFFF;
-  pxe_fast_read (&tftp_read, num);
-  return (tftp_read.Status) ? PXE_ERR_LEN : ((tftp_read.Buffer & 0xFFFF) - ofs);
-}
-
-#else
-
-static unsigned long pxe_read_blk (unsigned long buf, int num)
-{
-  PXENV_TFTP_READ_t tftp_read;
-  unsigned long ofs;
-
-  tftp_read.Buffer = SEGOFS(buf);
-  ofs = tftp_read.Buffer & 0xFFFF;
-  while (num > 0)
-    {
-      pxe_call (PXENV_TFTP_READ, &tftp_read);
-      if (tftp_read.Status)
-        return PXE_ERR_LEN;
-      tftp_read.Buffer += tftp_read.BufferSize;
-      if (tftp_read.BufferSize < pxe_blksize)
-        break;
-      num--;
-    }
-  return (tftp_read.Buffer & 0xFFFF) - ofs;
-}
-
-#endif
-
-#else
-#endif
-
-static unsigned long pxe_read_len (char* buf, unsigned long len)
+static unsigned long pxe_read_len (unsigned long long buf, unsigned long long len)
 {
   unsigned long old_ofs, sz;
 
@@ -421,7 +608,7 @@ static unsigned long pxe_read_len (char* buf, unsigned long len)
       sz = (pxe_read_ofs - old_ofs);
       if ((buf) && (sz))
         {
-          grub_memmove (buf, (char*)(PXE_BUF + old_ofs), sz);
+          grub_memmove64 (buf, (unsigned long long)(unsigned int)(char*)(PXE_BUF + old_ofs), sz);
           buf += sz;
         }
       pxe_cur_ofs -= pxe_read_ofs;	/* bytes to read */
@@ -450,7 +637,7 @@ static unsigned long pxe_read_len (char* buf, unsigned long len)
           sz += nr;
           if (buf)
             {
-              grub_memmove (buf, (char*)(PXE_BUF + pxe_read_ofs), nr);
+              grub_memmove64 (buf, (unsigned long long)(unsigned int)(char*)(PXE_BUF + pxe_read_ofs), nr);
               buf += nr;
             }
           if (nr < nn * pxe_blksize)
@@ -466,15 +653,15 @@ static unsigned long pxe_read_len (char* buf, unsigned long len)
             pxe_read_ofs += nr;
           if ((long)nb <= nb_pos)
             {
-              grub_putchar ('.');
+              grub_putchar ('.', 255);
               nb_pos -= nb_del;
             }
         }
 
       if (nb_del)
         {
-          grub_putchar ('\r');
-          grub_putchar ('\n');
+          grub_putchar ('\r', 255);
+          grub_putchar ('\n', 255);
         }
 
       if (pxe_cur_ofs)
@@ -485,16 +672,11 @@ static unsigned long pxe_read_len (char* buf, unsigned long len)
           nr = pxe_read_blk (PXE_BUF + pxe_read_ofs, 1);
           if (nr == PXE_ERR_LEN)
             return nr;
-	  //if (filepos == 0 && old_ofs == 0 && len < PXE_MIN_BLKSIZE && pxe_blksize != nr && filemax > nr && filemax > pxe_blksize && nr <= PXE_MAX_BLKSIZE && nr >= PXE_MIN_BLKSIZE)
-	  //{
-	  //  grub_printf ("\npxe_blksize tuned from %d to %d\n", pxe_blksize, nr);
-	  //  pxe_blksize = nr;
-	  //}
           if (pxe_cur_ofs > nr)
             pxe_cur_ofs = nr;
           sz += pxe_cur_ofs;
           if (buf)
-            grub_memmove (buf, (char*)(PXE_BUF + pxe_read_ofs), pxe_cur_ofs);
+            grub_memmove64 (buf, (unsigned long long)(unsigned int)(char*)(PXE_BUF + pxe_read_ofs), pxe_cur_ofs);
           pxe_cur_ofs += pxe_read_ofs;
           pxe_read_ofs += nr;
         }
@@ -505,7 +687,7 @@ static unsigned long pxe_read_len (char* buf, unsigned long len)
     {
       sz += len;
       if (buf)
-        grub_memmove (buf, (char *)PXE_BUF + old_ofs, len);
+        grub_memmove64 (buf, (unsigned long long)(unsigned int)(char *)PXE_BUF + old_ofs, len);
     }
   return sz;
 }
@@ -514,16 +696,27 @@ static unsigned long pxe_read_len (char* buf, unsigned long len)
    return 0. */
 int pxe_mount (void)
 {
-  if (current_drive != PXE_DRIVE)
+  if (current_drive != PXE_DRIVE || ! pxe_entry)
     return 0;
-
+#ifdef FSYS_IPXE
+  if (current_partition != IPXE_PART)
+    cur_pxe_type = def_pxe_type;
+  else if (has_ipxe)
+    cur_pxe_type = PXE_FILE_TYPE_IPXE;
+  else
+    return 0;
+#endif
   return 1;
 }
 
 /* Read up to SIZE bytes, returned in ADDR.  */
-unsigned long pxe_read (char *buf, unsigned long len)
+unsigned long long
+pxe_read (unsigned long long buf, unsigned long long len, unsigned long write)
 {
   unsigned long nr;
+
+  if (write == GRUB_WRITE)
+    return !(errnum = ERR_WRITE);
 
   if (! pxe_tftp_opened)
     return PXE_ERR_LEN;
@@ -536,12 +729,11 @@ unsigned long pxe_read (char *buf, unsigned long len)
         {
           if (pxe_saved_pos > filepos)
             {
-              //grub_printf("reopen\n");
               if (! pxe_reopen ())
                 return PXE_ERR_LEN;
             }
 
-          nr = pxe_read_len (NULL, filepos - pxe_saved_pos);
+          nr = pxe_read_len (0ULL, filepos - pxe_saved_pos);
           if ((nr == PXE_ERR_LEN) || (pxe_saved_pos + nr != filepos))
             return PXE_ERR_LEN;
         }
@@ -558,18 +750,84 @@ unsigned long pxe_read (char *buf, unsigned long len)
 
 /* Check if the file DIRNAME really exists. Get the size and save it in
    FILEMAX. return 1 if succeed, 0 if fail.  */
+struct pxe_dir_info
+{
+	char path[512];
+	char *dir[512];
+	char data[];
+} *P_DIR_INFO = NULL;
 int pxe_dir (char *dirname)
 {
-  int ret, ch;
-
-  if (print_possibilities)
-    return 1;
-
-  pxe_close ();
-
+  int ret;
+  char ch;
   ret = 1;
   ch = nul_terminate (dirname);
 
+	if ((grub_u32_t)pxe_tftp_name + grub_strlen(dirname) > (grub_u32_t)&pxe_tftp_open.FileName[127])
+	{
+		printf_debug0("Error: The file name exceeds the maximum number of characters.\n");
+		return 0;
+	}
+
+	if (print_possibilities)
+	{
+		char dir_tmp[128];
+		char *p_dir;
+		ret = grub_strlen(dirname);
+		p_dir = &dirname[ret];
+
+		if (ret && ret <=120)
+		{
+			while (ret && dirname[ret] != '/') 
+			{
+				ret--;
+			}
+			grub_memmove(dir_tmp,dirname,ret);
+		}
+		else
+			ret = 0;
+
+		grub_strcpy(&dir_tmp[ret],"/dir.txt");
+		if (P_DIR_INFO || (P_DIR_INFO = (struct pxe_dir_info*)grub_malloc(16384)))
+		{
+			int i;
+			char *p = P_DIR_INFO->data;
+			if (substring(dir_tmp,P_DIR_INFO->path,1) != 0)
+			{
+				memset(P_DIR_INFO,0,16384);
+				grub_strcpy(P_DIR_INFO->path,dir_tmp);
+				if (pxe_open(dir_tmp))
+				{
+					if (pxe_read((unsigned long long)(int)P_DIR_INFO->data,13312,GRUB_READ))
+					{
+						P_DIR_INFO->dir[0] = P_DIR_INFO->data;
+						for (i = 1;i < 512 && (p = skip_to(0x100,p));++i)
+						{
+							P_DIR_INFO->dir[i] = p;
+						}
+					}
+					pxe_close();
+				}
+			}
+			dirname += ret + 1;
+			ret = 0;
+			for (i = 0; i < 512 && (p = P_DIR_INFO->dir[i]);++i)
+			{
+				if (*dirname == 0 || substring (dirname, p, 1) < 1)
+				{
+					ret = 1;
+					print_a_completion(p, 1);
+				}
+			}
+		}
+		else
+			ret = 0;
+		if (!ret)
+			errnum = ERR_FILE_NOT_FOUND;
+		*p_dir = ch;
+		return ret;
+  }
+  pxe_close ();
   if (! pxe_open (dirname))
     {
       errnum = ERR_FILE_NOT_FOUND;
@@ -581,6 +839,103 @@ int pxe_dir (char *dirname)
 }
 
 void pxe_unload (void)
+{
+ #ifdef FSYS_IPXE
+	if (has_ipxe) pxe_file_func[PXE_FILE_TYPE_IPXE]->unload();
+#endif
+	pxe_file_func[PXE_FILE_TYPE_TFTP]->unload();
+}
+
+
+static int tftp_open(const char *name)
+{
+  PXENV_TFTP_GET_FSIZE_t *tftp_get_fsize;
+  tftp_close ();
+  if (!tftp_get_size()) return 0;
+  tftp_get_fsize = (void*)&pxe_tftp_open;
+  tftp_get_fsize->ServerIPAddress = pxe_sip;
+  tftp_get_fsize->GatewayIPAddress = pxe_gip;
+  tftp_get_fsize->FileSize = htons (TFTP_PORT);
+  pxe_tftp_open.PacketSize = pxe_blksize;
+  pxe_call (PXENV_TFTP_OPEN, &pxe_tftp_open);
+
+  if (pxe_tftp_open.Status)
+    return 0;
+
+  pxe_blksize = pxe_tftp_open.PacketSize;
+  pxe_tftp_opened = 1;
+  return 1;
+}
+
+static grub_u32_t tftp_get_size(void)
+{
+  PXENV_TFTP_GET_FSIZE_t *tftp_get_fsize;
+  if (pxe_tftp_opened) return 1;
+  tftp_get_fsize = (void*)&pxe_tftp_open;
+  tftp_get_fsize->ServerIPAddress = pxe_sip;
+  tftp_get_fsize->GatewayIPAddress = pxe_gip;
+
+  pxe_call (PXENV_TFTP_GET_FSIZE, tftp_get_fsize);
+  filemax = tftp_get_fsize->FileSize;
+
+  if (tftp_get_fsize->Status)
+    return 0;
+
+  return tftp_get_fsize->FileSize;
+}
+
+#if PXE_FAST_READ
+
+/* Read num packets , BUF must be segment aligned */
+static grub_u32_t tftp_read_blk (grub_u32_t buf, grub_u32_t num)
+{
+  PXENV_TFTP_READ_t tftp_read;
+  unsigned long ofs;
+
+  tftp_read.Buffer = SEGOFS(buf);
+  ofs = tftp_read.Buffer & 0xFFFF;
+  pxe_fast_read (&tftp_read, num);
+
+  /* disk cache destroyed, so invalidate it. */
+  buf_drive = -1;
+  buf_track = -1;
+  return (tftp_read.Status) ? PXE_ERR_LEN : ((tftp_read.Buffer & 0xFFFF) - ofs);
+}
+
+#else
+
+static grub_u32_t tftp_read_blk (grub_u32_t buf, grub_u32_t num)
+{
+  PXENV_TFTP_READ_t tftp_read;
+  unsigned long ofs;
+
+  /* disk cache will be destroyed, so invalidate it. */
+  buf_drive = -1;
+  buf_track = -1;
+
+  tftp_read.Buffer = SEGOFS(buf);
+  ofs = tftp_read.Buffer & 0xFFFF;
+  while (num > 0)
+    {
+      pxe_call (PXENV_TFTP_READ, &tftp_read);
+      if (tftp_read.Status)
+        return PXE_ERR_LEN;
+      tftp_read.Buffer += tftp_read.BufferSize;
+      if (tftp_read.BufferSize < pxe_blksize)
+        break;
+      num--;
+    }
+  return (tftp_read.Buffer & 0xFFFF) - ofs;
+}
+#endif
+
+static void tftp_close (void)
+{
+	PXENV_TFTP_CLOSE_t tftp_file_close;
+	pxe_call (PXENV_TFTP_CLOSE, &tftp_file_close);
+}
+
+static void tftp_unload(void)
 {
   PXENV_UNLOAD_STACK_t unload;
   unsigned char code[] = {PXENV_UNDI_SHUTDOWN, PXENV_UNLOAD_STACK, PXENV_STOP_UNDI, 0};
@@ -594,9 +949,18 @@ void pxe_unload (void)
   if (pxe_keep)
     return;
 
-  h = unset_int13_handler (1);
-  if (! h)
-    unset_int13_handler (0);
+  h = unset_int13_handler (1);	/* check if it was set. */
+  if (! h)	/* h==0 for set */
+    unset_int13_handler (0);	/* unset it */
+
+  /* at this moment, there should be no other handlers.
+   * if other handlers do exist, we should quit.
+   */
+  if (*((unsigned short *)0x413) != pxe_basemem)
+  {
+	grub_printf ("PXE unload failed because of an unknown handler(e.g., of int13) loaded.\n");
+	goto quit;
+  }
 
   i = 0;
   while (code[i])
@@ -610,15 +974,18 @@ void pxe_unload (void)
         }
       i++;
     }
-  if (*((unsigned short *)0x413) == pxe_basemem)
-    *((unsigned short *)0x413) = pxe_freemem;
+  //if (*((unsigned short *)0x413) == pxe_basemem)
+      *((unsigned short *)0x413) = pxe_freemem;
   pxe_entry = 0;
   ROM_int15 = *((unsigned long *)0x54);
+  ROM_int13 = ROM_int13_dup = *((unsigned long *)0x4C);
   grub_printf ("PXE stack unloaded\n");
 quit:
-  if (! h)
+  if (! h)	/* h==0 for set */
     set_int13_handler (bios_drive_map);
 }
+
+#endif
 
 static void print_ip (IP4 ip)
 {
@@ -626,17 +993,17 @@ static void print_ip (IP4 ip)
 
   for (i = 0; i < 3; i++)
     {
-      grub_printf ("%d.", ip & 0xFF);
+      grub_printf ("%d.", (unsigned long)(unsigned char)ip);
       ip >>= 8;
     }
-  grub_printf ("%d", ip);
+  grub_printf ("%d", (unsigned long)(unsigned char)ip);
 }
 
 int pxe_func (char *arg, int flags)
 {
   if (! pxe_entry)
     {
-      grub_printf ("No PXE stack\n");
+      //grub_printf ("No PXE stack\n");
       goto bad_argument;
     }
   if (*arg == 0)
@@ -646,8 +1013,8 @@ int pxe_func (char *arg, int flags)
 
       pxe_tftp_name[0] = '/';
       pxe_tftp_name[1] = 0;
-      grub_printf ("blksize : %d\n", pxe_blksize);
-      grub_printf ("basedir : %s\n", pxe_tftp_open.FileName);
+      grub_printf ("blksize: %d [%s]\n", pxe_blksize,def_pxe_type==1?"iPXE":"pxe");
+      grub_printf ("basedir: %s\n",pxe_tftp_open.FileName);
       grub_printf ("bootfile: %s\n", discover_reply->bootfile);
       grub_printf ("client ip  : ");
       print_ip (pxe_yip);
@@ -661,14 +1028,14 @@ int pxe_func (char *arg, int flags)
           pc = buf;
           pc = pxe_outhex (pc, pxe_mac[i]);
           *pc = 0;
-          grub_printf ("%s%c", buf, (i == pxe_mac_len - 1) ? '\n' : '-');
+          grub_printf ("%s%c", buf, ((i == pxe_mac_len - 1) ? '\n' : '-'));
         }
     }
   else if (grub_memcmp(arg, "blksize", sizeof("blksize") - 1) == 0)
     {
-      int val;
-
-      arg = skip_to (0, arg);
+      unsigned long long val;
+      grub_u32_t force=arg[7] != '=';
+      arg = skip_to (1, arg);
       if (! safe_parse_maxint (&arg, &val))
         return 0;
       if (val > PXE_MAX_BLKSIZE)
@@ -676,36 +1043,22 @@ int pxe_func (char *arg, int flags)
       if (val < PXE_MIN_BLKSIZE)
         val = PXE_MIN_BLKSIZE;
       pxe_blksize = val;
+      if (!force) try_blksize(val);
     }
   else if (grub_memcmp (arg, "basedir", sizeof("basedir") - 1) == 0)
     {
-      int n;
-
       arg = skip_to (0, arg);
       if (*arg == 0)
         {
           grub_printf ("No pathname\n");
 	  goto bad_argument;
         }
-      if (*arg != '/')
-        {
-          grub_printf ("Base directory must start with /\n");
-	  goto bad_argument;
-        }
-      n = grub_strlen (arg);
-      if (n > sizeof(pxe_tftp_open.FileName) - 8)
-        {
-          grub_printf ("Path too long\n");
-	  goto bad_argument;
-        }
-      grub_strcpy ((char*)pxe_tftp_open.FileName, arg);
-      n--;
-      while ((n >= 0) && (pxe_tftp_open.FileName[n] == '/'))
-        n--;
-      pxe_tftp_name = (char*)&pxe_tftp_open.FileName[n + 1];
+	set_basedir(arg);
     }
   else if (grub_memcmp (arg, "keep", sizeof("keep") - 1) == 0)
     pxe_keep = 1;
+  else if (grub_memcmp (arg, "nokeep", sizeof("nokeep") - 1) == 0)
+    pxe_keep = 0;
   else if (grub_memcmp (arg, "unload", sizeof("unload") - 1) == 0)
     {
       pxe_keep = 0;
@@ -716,7 +1069,7 @@ int pxe_func (char *arg, int flags)
     {
       PXENV_GET_CACHED_INFO_t get_cached_info;
       BOOTPLAYER *bp;
-      int val;
+      unsigned long long val;
 
       arg = skip_to (0, arg);
       if (! safe_parse_maxint (&arg, &val))
@@ -739,11 +1092,11 @@ int pxe_func (char *arg, int flags)
 #endif
   else if (grub_memcmp (arg, "detect", sizeof("detect") - 1) == 0)
     {
-	int blksize = 0;
+	unsigned long long blksize = 0;
 	/* pxe_detect should be done before any other command. */
 	arg = skip_to (0, arg);
-	if (*arg != '/')
-	{
+//	if (*arg != '/')
+//	{
 		if (*arg >= '0' && *arg <= '9')
 		{
 			if (! safe_parse_maxint (&arg, &blksize))
@@ -757,9 +1110,24 @@ int pxe_func (char *arg, int flags)
 			arg = 0;
 		//else
 		//	goto bad_argument;
-	}
-	return pxe_detect (blksize, arg);
+//	}
+	return pxe_detect ((int)blksize, arg);
     }
+    #ifdef FSYS_IPXE
+    else if (has_ipxe && grub_memcmp (arg ,"type",sizeof("type") - 1) == 0)
+    {
+	arg = skip_to (0, arg);
+	switch(*arg)
+	{
+		case '0':
+		case '1':
+			def_pxe_type = *arg - '0';
+			break;
+		default:
+			goto bad_argument;
+	}
+    }
+    #endif
   else
     {
 bad_argument:
@@ -769,6 +1137,3 @@ bad_argument:
   return 1;
 }
 
-#endif
-
-#endif

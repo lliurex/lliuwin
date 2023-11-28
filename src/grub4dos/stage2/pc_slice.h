@@ -123,6 +123,7 @@
 #define PC_SLICE_TYPE_EXTENDED     	5
 #define PC_SLICE_TYPE_EXTENDED_HIDDEN  	0x15
 #define PC_SLICE_TYPE_FAT16_GT32M  	6
+#define PC_SLICE_TYPE_EXFAT  		7
 #define PC_SLICE_TYPE_FAT32		0xb
 #define PC_SLICE_TYPE_FAT32_LBA		0xc
 #define PC_SLICE_TYPE_FAT16_LBA		0xe
@@ -131,12 +132,14 @@
 #define PC_SLICE_TYPE_EZD        	0x55
 #define PC_SLICE_TYPE_MINIX		0x80
 #define PC_SLICE_TYPE_LINUX_MINIX	0x81
+#define PC_SLICE_TYPE_LINUX_SWAP	0x82
 #define PC_SLICE_TYPE_EXT2FS       	0x83
 #define PC_SLICE_TYPE_LINUX_EXTENDED	0x85
+#define PC_SLICE_TYPE_LINUX_LOG_VOL	0x8e
 #define PC_SLICE_TYPE_VSTAFS		0x9e
 #define PC_SLICE_TYPE_DELL_UTIL		0xde
 #define PC_SLICE_TYPE_LINUX_RAID	0xfd
-
+#define PC_SLICE_TYPE_GPT		0xee
 
 /* For convinience.  */
 /* Check if TYPE is a FAT partition type. Clear the hidden flag before
@@ -149,6 +152,7 @@
      || _type == PC_SLICE_TYPE_FAT16_LBA \
      || _type == PC_SLICE_TYPE_FAT32 \
      || _type == PC_SLICE_TYPE_FAT32_LBA \
+     || _type == PC_SLICE_TYPE_EXFAT \
      || _type == PC_SLICE_TYPE_DELL_UTIL; })
 
 #if 1

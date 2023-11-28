@@ -129,18 +129,25 @@
 
 #include "filesys.h"
 
-/* so we can disable decompression  */
-int no_decompression = 0;
-
 /* used to tell if "read" should be redirected to "gunzip_read" */
 int compressed_file;
 
+/* identify active decompressor */
+int decomp_type;
+
+struct decomp_entry decomp_table[NUM_DECOM] =
+{
+	{"gz",gunzip_test_header,gunzip_close,gunzip_read},
+	{"lzma",dec_lzma_open,dec_lzma_close,dec_lzma_read},
+	{"lz4",dec_lz4_open,dec_lz4_close,dec_lz4_read},
+	{"vhd",dec_vhd_open,dec_vhd_close,dec_vhd_read},
+};
+
 /* internal variables only */
-static unsigned long gzip_data_offset;
-static unsigned long gzip_filepos;
-static unsigned long gzip_filemax;
-static unsigned long gzip_fsmax;
-static unsigned long saved_filepos;
+static unsigned long long gzip_data_offset;
+static unsigned long long gzip_filepos;
+static unsigned long long gzip_fsmax;
+static unsigned long long saved_filepos;
 static unsigned long gzip_crc;
 
 /* internal extra variables for use of inflate code */
@@ -177,7 +184,7 @@ reset_linalloc (void)
 static void
 gunzip_swap_values (void)
 {
-  register unsigned long itmp;
+  register unsigned long long itmp;
 
   /* swap filepos */
   itmp = filepos;
@@ -214,7 +221,7 @@ bad_field (unsigned long len)
       }	else
 	  len--;
       
-      not_retval = grub_read (&ch, 1);
+      not_retval = grub_read ((unsigned long long)(unsigned int)&ch, 1, 0xedde0d90);
     }
   while (not_retval);
 
@@ -269,6 +276,15 @@ gunzip_test_header (void)
 {
   unsigned char buf[10];
   
+  /* check lz4 */
+  if (dec_lz4_open ())
+	goto test_dec;
+  /* check lzma */
+  if (dec_lzma_open ())
+	goto test_dec;
+  if (dec_vhd_open())
+	goto test_dec;
+
   /* "compressed_file" is already reset to zero by this point */
 
   /*
@@ -276,8 +292,9 @@ gunzip_test_header (void)
    *  (other than a real error with the disk) then we don't think it
    *  is a compressed file, and simply mark it as such.
    */
+  gzip_filemax = filemax;
   if (no_decompression
-      || grub_read ((char *)buf, 10) != 10
+      || grub_read ((unsigned long long)(unsigned int)(char *)buf, 10, 0xedde0d90) != 10
       || ((*((unsigned short *) buf) != GZIP_HDR_LE)
 	  && (*((unsigned short *) buf) != OLD_GZIP_HDR_LE)))
     {
@@ -293,7 +310,7 @@ gunzip_test_header (void)
   if (buf[2] != DEFLATED
       || (buf[3] & UNSUPP_FLAGS)
       || ((buf[3] & EXTRA_FIELD)
-	  && (grub_read ((char *)buf, 2) != 2
+	  && (grub_read ((unsigned long long)(unsigned int)(char *)buf, 2, 0xedde0d90) != 2
 	      || bad_field (*((unsigned short *) buf))))
       || ((buf[3] & ORIG_NAME) && bad_field (-1))
       || ((buf[3] & COMMENT) && bad_field (-1)))
@@ -308,7 +325,7 @@ gunzip_test_header (void)
   
   filepos = filemax - 8;
   
-  if (grub_read ((char *)buf, 8) != 8)
+  if (grub_read ((unsigned long long)(unsigned int)(char *)buf, 8, 0xedde0d90) != 8)
     {
       if (! errnum)
 	errnum = ERR_BAD_GZIP_HEADER;
@@ -321,6 +338,7 @@ gunzip_test_header (void)
 
   initialize_tables ();
 
+  decomp_type = DECOMP_TYPE_GZ;
   compressed_file = 1;
   gunzip_swap_values ();
   /*
@@ -329,7 +347,22 @@ gunzip_test_header (void)
 
   filepos = 0;
 
+test_dec:
+  if (grub_read((unsigned long long)(unsigned int)(char *)buf, 1,GRUB_READ) != 1LL)
+  {
+    if (debug)
+      printf("\nWarning:%s Compressed data detected but failed to decompress - using raw data!\n",decomp_table[decomp_type].name);
+    filemax = gzip_filemax;
+    decomp_table[decomp_type].close_func();
+    compressed_file = 0;
+  }
+  filepos = 0;
   return 1;
+}
+
+void 
+gunzip_close (void)
+{
 }
 
 
@@ -494,7 +527,7 @@ get_byte (void)
   if (filepos == gzip_data_offset || bufloc == INBUFSIZ)
     {
       bufloc = 0;
-      grub_read ((char *)inbuf, INBUFSIZ);
+      grub_read ((unsigned long long)(unsigned int)(char *)inbuf, INBUFSIZ, 0xedde0d90);
     }
 
   return inbuf[bufloc++];
@@ -1044,22 +1077,12 @@ init_dynamic_block (void)
   bl = lbits;
   if ((i = huft_build (ll, na, 257, cplens, cplext, &tl, &bl)) != 0)
     {
-#if 0
-      if (i == 1)
-	printf ("gunzip: incomplete literal tree\n");
-#endif
-
       errnum = ERR_BAD_GZIP_DATA;
       return;
     }
   bd = dbits;
   if ((i = huft_build (ll + na, nd, 0, cpdist, cpdext, &td, &bd)) != 0)
     {
-#if 0
-      if (i == 1)
-	printf ("gunzip: incomplete distance tree\n");
-#endif
-
       errnum = ERR_BAD_GZIP_DATA;
       return;
     }
@@ -1187,10 +1210,10 @@ initialize_tables (void)
 }
 
 
-unsigned long
-gunzip_read (char *buf, unsigned long len)
+unsigned long long
+gunzip_read (unsigned long long buf, unsigned long long len, unsigned long write)
 {
-  unsigned long ret = 0;
+  unsigned long long ret = 0;
 
   compressed_file = 0;
   gunzip_swap_values ();
@@ -1210,7 +1233,7 @@ gunzip_read (char *buf, unsigned long len)
 
   while (len > 0 && !errnum)
     {
-      register unsigned long size;
+      register unsigned long long size;
       register char *srcaddr;
 
       while (gzip_filepos >= saved_filepos)
@@ -1221,9 +1244,11 @@ gunzip_read (char *buf, unsigned long len)
       if (size > len)
 	size = len;
 
-      memmove (buf, srcaddr, size);
-
-      buf += size;
+      if (buf)
+      {
+	grub_memmove64 (buf, (unsigned long long)(unsigned int)srcaddr, size);
+	buf += size;
+      }
       len -= size;
       gzip_filepos += size;
       ret += size;

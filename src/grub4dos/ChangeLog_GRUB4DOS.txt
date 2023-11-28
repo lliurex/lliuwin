@@ -1,3 +1,230 @@
+2019-12-23 (chenall) Supported Multi-line initrd.
+2015-01-10 New Batch script debugging features.
+2014-12-15 (tinybit) get rid of endless loop due to wrong usage of pxe detect.
+2014-12-01 add new filesystem `ipxe`,support for access file with iPXE;
+2014-11-29 add new command `ipxe`.
+2014-11-19 (tinybit) fix a bug that erroneously hooked/unhooked non-fb drives.
+2014-11-10 supported initrdfs.
+2014-11-03 (tinybit) mask off non-booting floppy drives in order to gain more stability.
+2014-11-02 (tinybit) fix offset nestification problem for virtual drives built on another in-situ virtual drive.
+2014-10-25 disabled warning and errinfo message redirect.
+2014-10-17 PXE Boot supported proxyDHCP and gateway.
+2014-10-10 (tinybit) two variables boot_drive and install_partition can be preset to a value before transferring control to grub4dos.
+2014-09-08 (tinybit) supported backslash-delimited pathname used by pxe server.
+2014-09-04 fixed a bug in dir();(reported by Steve6375,issue 154).
+2014-09-04 add new command 'raw'.
+2014-08-25 fixed a bug in devread(); extend byte_offset to 64-bit.(reported by Steve6375,issue 194).
+2014-08-22 gpt partition hide/unhide bug fixed.
+2014-08-19 add new command 'crc32'.
+2014-08-17 Supported hide/unhide gpt partition.
+2014-08-13 (tinybit) Urgency! Fixed a serious bug on NTFS WRITE access.
+2014-07-10 (tinybit) fixed a bug on iftitle(reporter: steve6375 and George).
+2014-07-02 (tinybit) repulse GigaByte Key-E attack(reporter: 2011after).
+2013-10-18 (chenall) add new command options --set-ext,set default grub4dos executable extensions.
+2013-09-17 (tinybit) workaround for ASRock ConRoe865PE (issue 153).
+2013-07-12 (tinybit) code cleanup against unused GRUB_UTIL, STAGE1_5, NETBOOT, DISKLESS.
+2013-06-24 (tinybit) Improved startup message fighting against hangups due to wrong menu setup by users.
+2013-06-23 (yaya) fix issue 85(bootlace64.com can not run on 64-bit linux).
+2013-05-21 (daven) enhanced the debug boot code (press Insert when grldr is loading to activate).
+2013-05-16 (chenall) done issue 133(add `set @extend BASE_ADDR size`).
+2013-04-06 Fixed the file missing BUG on ISO9660 file system,fsys_iso9660.c(iso9660_dir func).
+2013-03-29 (chenall) fix issue 125,path limitation in menu.
+2013-03-28 (chenall) fix issue 126;
+2013-03-20 (chenall)Add new operator ";;";
+2013-02-28 (tinybit) re-resolved issue 74.
+2013-02-02 (tinybit)enhanced eltorito.sys for working with buggy BIOS which not supporting INT13/4B01.
+2013-01-17 (tinybit)fix issue 107 and issue 109.
+2013-01-12 (tinybit)cancel r313. add eltorito.sys. set safe_mbr_hook=1.
+2012-12-30 fixed a bug on checking filename length in grub_open(issue 103).
+2012-12-16  bug fixed(Issue 100: echo to nul after kernel command causes crash).
+2012-12-13 (tinybit)set timeout back to 1. set safe_mbr_hook to 0.
+2012-11-22 (tinybit)minor fixes on geometry_func and others.
+2012-11-07 (tinybit)avoid using memory between address 15M and 16M.
+2012-10-16 (tinybit)use enhanced keyboard function to support F11, F12 keys.
+2012-10-15 (tinybit)dropped 2012-08-17 pmode keyboard code to satisfy MacBook.
+2012-10-14 (tinybit)removed variable to_o in map_func for solving issue 97.
+2012-10-05 (tinybit)suppressed startup messages on normal boot.
+2012-09-18 (tinybit)accepted LZMAed preset-menu. font lines can be appended to both preset-menu and menu.lst.
+2012-09-08 (tinybit)added new map options --skip-sectors and --max-sectors.
+2012-08-23 (tinybit)added variables to identify the CPU with cpuid.
+2012-08-17 (tinybit)removed setkey support for Control, Shift, Alt and CapsLock keys. removed HLT instructions to satisfy buggy AMDs. getkey and chechkey functions were re-written to avoid using the int16h BIOS call. added chainloader support for bootmgr inside exFAT.
+2012-06-08 (tinybit)reduce PXE_BUFLEN to 63.5K to satisfy PXE BIOS.
+2012-05-23 (tinybit)change BUFFERLEN to 64K; use 64-bit sector number for block-list files.
+2012-05-04 (tinybit)fixed a bug in biosdisk(); extend sector number to 64-bit.
+2012-04-25 (tinybit)fixed a bug on failed dd argument of "buf=".
+2012-04-18 (tinybit)trust low mem size at 0x413 instead of int15 report.
+2012-04-16 (tinybit)enable floppy partition access for parttype etc.
+2012-04-12 (tinybit)removed low-mem holes for konboot to run ok.
+2012-03-26 (tinybit)fix int15 handler, add bootlace64.com for Linux x86_64.
+2012-02-13 (tinybit)bugfix on initrd issue (issue 74).
+2012-01-15 (tinybit)fixed failure loading multi-boot kernel(issue 66).
+2011-12-24 (tinybit)Added preliminary interrupt mechanism.
+2011-12-05 Issue 53: add new command 'iftitle' for menu.(thanks @Steve6375).
+2011-11-17 (tinybit)supported utf8 and unicode char printing.
+2011-11-04 (tinybit)added new argument of max_width for putchar; various fixes.
+2011-10-29 (tinybit)add new command 'font' for vesa fonts.(Not yet complete). 
+2011-10-22 (tinybit)bug fix on failed loading multi-boot kernel(issue 44).
+2011-10-20 (tinybit)increased SYSTEM_RESERVED_MEMORY upto 0x2000000(i.e., 32M).
+2011-10-19 (tinybit)merged console/graphics setcolor functions.
+2011-10-18 (tinybit)rearranged memory usage and preparing for vbe support. merged console/graphics setcolor functions.
+2011-10-03 (tinybit)changed buf_addr from 0x20000 to 0x100000 to avoid possible conflict between dd_func and get_diskinfo.
+2011-10-01 (tinybit)resolved conflicts between gfxmenu and configfile.
+2011-09-28 (chenall)fixed partition enumeration problem(important!)(disk_io.c).
+2011-09-16 (tinybit)disabled ELCR code for ASUS eee PC 1215B.
+2011-09-06 (tinybit)fixed pxe_detect to handle long bootfile name.
+2011-08-05 (tinybit)added a map option --e820cycles for Dell Laptop N4030.
+2011-07-27 (tinybit)fixed a careless mistake in clean_entry().
+2011-07-21 (tinybit)added a map option --int15nolow. Some changes on handler.
+2011-07-10 (tinybit)re-enabled int13/ah=16h floppy detection in int13_handler.
+2011-07-27 (tinybit)fixed a careless mistake in clean_entry().
+2011-07-21 (tinybit)added a map option --int15nolow. Some changes on handler.
+2011-07-10 (tinybit)re-enabled int13/ah=16h floppy detection in int13_handler.
+2011-06-28 (tinybit)fixed a careless mistake in probe_mbr(missing evaluation on C/H/S). fixed a bug in clean_entry() which return the address of a local variable.
+2011-06-27 (tinybit)added wee_skip_to as a replacement for skip_to.
+2011-06-22 (tinybit)better probe_mbr handling abnormal partition tables.
+2011-06-19 (karyonix)int15 fix. (tinybit)remove code to save handler room.
+2011-06-10 (tinybit)trust CHS in floppy BPB for GRUB.EXE to run under DOS.
+2011-06-09 (tinybit)trust CHS in floppy BPB for GRUB.EXE to boot via NTLDR.
+2011-06-04 (namiltd)added exFAT filesystem accessibility.
+2011-06-02 (tinybit)better handling loading grub.exe from NTLDR in floppy
+2011-05-31 (tinybit)fix chainloading grub.exe from Grub4DOS
+2011-05-31 (tinybit)make grub.exe loadable by NTLDR
+2011-05-24 (tinybit)make grub.exe chainloadable
+2011-05-19 applied Roy's patch(Issue 27: adding PC-DOS/MS-DOS chainloading support).
+2011-05-14 (tinybit)use HLT command in key detection
+2011-05-09 applied steve6375's patch( Issue 23:	Improve grub4dos menu item numbering).
+2011-05-07 applied Roy's patch(Issue 25: Add chainloading DELL DRMK DELLBIO.BIN support).
+2011-05-06 applied Roy's patch(issue 24: Add ReactOS freeldr chainloading support).
+2011-04-29 (tinybit)exclude ntfs short filename.allow space in fb_filename.
+2011-03-22 fixed a bug on case sensitivity in filename completion. added a new parameter "case_insensitive" to print_a_completion().
+2011-03-19 fixed a bug on NTFS unicode filename handling. let unicode_to_utf8() return string length after convertion.
+2011-03-05 fixed a bug on "cdrom --add-io-ports=...".
+2011-03-04 setup a byte at offset 0x1F0 of GRUB.EXE to indicate number of
+	   sectors used by the DOSSTART.S; change boot_drive to -1 so that
+	   external programs can set it up before transfer control to grub4dos;
+	   when grub.exe is loaded as a kernel, the default boot device of
+	   grub.exe will be set to the current root device of current grub4dos.
+2011-02-20 prevent IO.SYS from wiping out int32-3F.
+2011-02-17 fixed a bug of "0xEA not properly restored" in realmode_run(asm.S).
+2011-02-16 fixed a bug on stack checking in realmode_run(asm.S).
+2011-02-16 changed real_to_prot(asm.S) and related calls according to WEE.
+2011-01-22 fixed "map (hd1) (0xFF)" issue of failed cdrom emulation.
+2011-01-18 set "APM BIOS call" as default halt method(see http://reboot.pro/13632/).
+2011-01-16 clear preset_menu before enter_cmdline. uncomment the required "default entry number" resolving code(stage2.c).
+2011-01-15 trying to fix ELF executable loading problem(issue 14). (confirmed by the reporter).
+2011-01-07 applied karyonix's patch (issue 9: fix geometry_tune function)
+2011-01-07 applied Roy's patch(supported packed DR-DOS).
+2010-12-29 applied Roy's patch(fixed build issue).
+2010-12-25 applied Roy's patch(issue 13: fix autoconf and gcc issues in Linux).
+2010-12-11 (r73)applied karyonix's patch(issue 11: Wrong data read USB)
+2010-11-30 (r69)applied karyonix's patch(support lzma decompression).
+2010-12-07 (r68)applied karyonix's patch(issue 9).
+2010-11-15 improved ACPI halt code(patched by zw2312914,Thanks for MR.rockrock99 and MR.xianglang reports their different and special hardware response mechanism ).
+2010-11-04 finally fixed the ACPI halt failure on AMI netbook(by commenting out ACPI-enable code).
+2010-11-03 partially go back to ACPI halt code of 2010-10-29.
+2010-11-02 deleted a duplicate code snip which could cause halt failure.
+2010-10-31 fixed the find issue. changed ACPI halt code(based on zw2312914).
+2010-10-29 improved ACPI halt code(patched by zw2312914).
+2010-10-22 fixed AMI netbook gray-screen-of-death problem on halt.
+2010-10-19 allow BSD primary partitions to be made active.
+2010-10-12 fixed grub.exe issues when booting off Linux/kexec. Only comments added compared to 2010-10-11.
+2010-10-11 try to fix grub.exe issues when booting off Linux/kexec(enabled system timer 0 init).
+2010-10-09 try to fix grub.exe issues when booting off Linux/kexec(enabled writing ELCR port 4D0/4D1).
+2010-10-08 try to fix grub.exe issues when booting off Linux/kexec(enabled coprocessor init by writing port F0/F1).
+2010-10-07 try to fix grub.exe issues when booting off Linux/kexec(disabled writing ELCR port 4D0/4D1).
+2010-10-04 improved halt with ACPI. try to fix grub.exe issues when booting off Linux/kexec(by sending 100 EOIs to PICs).
+2010-09-22 let chainloader recognize isolinux.bin 4.02.
+2010-09-19 added support for 800x600 graphics mode(SVGA mode 6A).
+2010-08-09 improved CHS probing code of map command on ISO9660 images.
+2010-08-04 finally find out the missing-extended-partition problem is caused by a gcc bug, and workarounds are created.
+2010-07-25 re-enabled the extended partition with logical partitions in disorder.
+2010-07-24 patch by chenall: cat --length=0 will return the size of the compressed file if it is gzipped; fix memory-not-enough problem when mapping a gzipped memory-file with a high compression ratio.
+2010-07-23 improved next_pc_slice() to cope with the partition-loop problem.
+2010-07-22 try to solve the problem of missing Linux extended partitions in Tab-completion.
+2010-07-21 improved next_pc_slice() to cope with the partition-loop problem.
+2010-07-20 changed code about pxe_basemem to solve the problem that pxe_unload fail to release memory.
+2010-07-12 fixed a bug in guess_dos_versions(for DOS executable grub.exe).
+2010-06-21 applied bean's patch(supported new (ud) device created with fbinst1.6).
+2010-06-09 applied karyonix's patch(fixes on grub_read and blocklist).
+2010-06-07 adjusted probe_int(dosstart.S) to deal with HP DV3-2309TX on its garbage int76 vector.
+2010-06-03 adjusted restore_BDA_EBDA(dosstart.S) to deal with HP on its garbage EBDA size byte.
+2010-05-31 unhook int13 before hooking it in load_initrd() to avoid duplicate hooking.
+2010-05-29 resolved conflict between drives_addr and mmap_addr for multiboot kernels.
+2010-05-27 adjusted probe_int(dosstart.S) to deal with DELL on its garbage int05 vector.
+2010-05-23 change /main.lst back to /menu.lst, and the original /menu.lst dir to /menu for pxe booting.
+2010-05-21 changed initial config filename from /menu.lst to /main.lst for pxe booting.
+2010-05-19 fixed problem of mapping small file(<512B) to (rd).
+2010-05-15 added --keep-pxe option for grub.exe running under DOS.
+2010-05-14 (chenall)fixed ntfs small file(<4KB) access problem.
+2010-05-13 added --off option for hiddenmenu. added nokeep subcommand for pxe. let halt return on failure.
+2010-05-03 hopefully non-linux kernels could get loaded now. version number changed to 0.4.5b.
+2010-03-14 fixed problems in set_bootdev and others.
+2010-03-13 fixed a (possible)bug in init_pic(affect grub.exe as a linux kernel format). applied Icecube's patch(curr_part_start).
+2010-01-22 applied karyonix's patch(PAE).
+2010-01-07 fixed problem of "command-line length limited to 15" on external executables.
+2010-01-03 applied karyonix's patch(PAE paging).
+2010-01-02 applied karyonix's patch(map improvements).
+2009-12-30 fixed the failed find. note that the kernel command could hang while loading non-linux kernels, which is a known bug on newish 0.4.5 versions. 
+2009-12-28 initial implementation of program execution. fixed a bug causing FAT16 search hang(grldrstart.S). version number changed to 0.4.5a. 
+2009-12-12 moved up 32-bit grub kernel code at above physical addess 3M. moved down buffer for dd and geometry-tune at 0x20000. moved down raw disk buffer at 0x30000. version number changed to 0.4.5. 
+2009-12-02 (chenall)fixed a bug in color_func(builtins.c).
+2009-12-01 (chenall)fixed a bug which caused dd/write to write onto the wrong sector of the disk(fsys_ntfs.c).
+2009-11-29 (chenall)fixed a bug when using (md) to access memory at 2G and above(bios.c). improved memmove64 to support overlap(asm.S).
+
+2009-11-25 Caution! Reports say build 2009-11-08 and later will write wrong data onto disk when using dd and/or write commands.
+
+2009-11-13 (chenall)added --replace option for cat. This will write to file. Caution!
+2009-11-11 let PXE_BUF use BUFFERADDR. cancelled (hd+) support. added (hd) and (hd-N) support.
+2009-11-09 moved FSYS_BUF and some other buffers up at 0x3E0000. (chenall)added (hd+) support for map.
+2009-11-08 map memdrive images at memory address above 4GB(only for 64-bit CPU). deleted SETUP, INSTALL and EMBED commands.
+
+2009-10-16 Turned off int13/AX=4B01/DL=7F cdrom query which may hang on some machines. Commented out DMA code related to running via KEXEC. Implemented 64-bit int13 memdrive block moving code.
+2009-06-20(r68) add (ud) device to access space created with fbinst.
+2009-06-11 fixed a bug of missing assignment of ES and BX registers in int13_handler(asm.S).
+2009-05-13 fixed size-wrap-to-0 infinite loop issue in grub_read()(disk_io.c).
+2009-05-07(r67) resolved conflict between int10 stack and BIOS Data Area(grldrstart.S).
+2009-05-03 fixed a bug in geometry_tune(grldrstart.S, asm.S). zw2312914 report.
+2009-04-30 triple mbr without bpb also bootable as a floppy(grldrstart.S).
+2009-04-26 added ending CHS calculation for partition entry in mbr of the triple mbr(bootlace.inc).
+2009-04-25 bug fix in dd about device length calculation(builtins.c).
+2009-04-24 save and restore GDTR in int13_handler(asm.S).
+2009-04-06 accept partitions starting in the mbr track(probe_mbr, builtins.c).
+2009-04-05 triple mbr floppy partition (fdX,Y) support for some USB BIOSes(disk_io.c).
+2009-04-04 fixed partition table entries in the 2nd and 3rd mbr of the triple mbr(bootlace.inc).
+2009-03-31(r66) 0.4.4 official release.
+2009-03-28 removed the problematic global variable "i"; reduced one open-file step for configfile on cdrom.
+2009-03-27 fixed memory overlap issue on "map --rehook".
+2009-03-25 disabled the search for DEFAULT file on cdrom(in cmain, stage2.c).
+2009-03-24 fixed problem of WRITE/DD on modifying internal variables. added dd options for user-defined buffer.
+2009-03-21 bug fix: turned errorcheck on in run_script and enter_cmdline.
+2009-03-20(r65) fixed `configfile not working in menu init command group'.
+2009-03-19 trying to fix problem of `configfile running slowly'.
+2009-03-18 fixed problem of `geometry-tune too slow' on vmware.
+2009-03-17 fixed endless loop problem while running "configfile (md)4+8".
+2009-03-15 added new option --sync for geometry command.
+2009-03-14 added new option --tune for geometry command.
+2009-03-12 rearranged preset-menu items.
+2009-03-11 changed geometry-tune code(aim to solve problem on vmware).
+2009-03-07 fixed a bug(in grldrstart.S) brought in since 2009-02-05.
+2009-03-03 fixed memory overflow issue with (rd). canceled restrictions on some disk write commands.
+2009-02-26 fixed geometry-tune issue(reportedly with Virtual PC).
+2009-02-21 changes made according to Simon's hiddenmenu patches.
+2009-02-20 documented the command line needed for chainloading stage2 of grub legacy.
+2009-02-19 now a range of drives can be unmapped.
+2009-02-18 possibility to run another menu.lst after gfxmenu.
+2009-02-17 fix graphics display issue generated last time.
+2009-02-15 improved color command to set color for help text and heading line.
+2009-02-13 fix problems booting Linux when there are mappings.
+2009-02-11 added ext4 support(in fsys_ext2fs.c).
+2009-02-09 isolinux.bin(version 3.73) gets chainloaded again.
+2009-02-08 Move some variables to a known address. The read command returns value at addess.
+2009-02-03 New initrd syntax loading multiple cpio files for Linux 2.6 kernels.
+2009-01-30 Supported per-menu-item help text.
+2009-01-28 Fixed printf issue. Allowed non-block files to be written with dd and write.
+2009-01-24 New syntax of WRITE support writing string to file.
+2009-01-16(r64) Added gfxmenu support
+2009-01-09 New commands dd and uuid. fixed a bug in disk emulation.
+2008-12-30 Work around for BIOSes lacking INT15/E820 support.
 2008-12-29(r63) Now the preset menu holds the highest priority. MSYS/MinGW support.
 2008-12-24 Added "detect" sub-command for the "pxe" command.
 2008-12-21 Fixed several bootlace bugs when running under DOS.

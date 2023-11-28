@@ -21,30 +21,37 @@
 
 #include "shared.h"
 #include "filesys.h"
+#include "iamath.h"
 #include "fat.h"
+#include "term.h"
 
 struct fat_superblock 
 {
-  int fat_offset;
-  int fat_length;
+  unsigned long fat_offset;
+  unsigned long fat_length;
   int fat_size;
-  int root_offset;
+  int fat_type;
+  unsigned long root_offset;
   int root_max;
-  int data_offset;
+  unsigned long data_offset;
   
-  int num_sectors;
-  int num_clust;
-  int clust_eof_marker;
-  int sects_per_clust;
+  unsigned long long num_sectors;
+  unsigned long num_clust;
+  unsigned long clust_eof_marker;
+  unsigned long sects_per_clust;
   int sectsize_bits;
   int clustsize_bits;
-  int root_cluster;
+  unsigned long root_cluster;
   
-  int cached_fat;
-  int file_cluster;
+  long long cached_fat;
+  unsigned long file_cluster;
+  unsigned long long contig_size;
   unsigned long current_cluster_num;
-  int current_cluster;
+  
+  unsigned long current_cluster;
+  unsigned long long vol_sector;
 };
+	unsigned int fats_type;
 
 /* pointer(s) into filesystem info buffer for DOS stuff */
 #define FAT_SUPER ((struct fat_superblock *)(FSYS_BUF + 32256))/* 512 bytes long */
@@ -67,7 +74,8 @@ int
 fat_mount (void)
 {
   struct fat_bpb bpb;
-  __u32 magic, first_fat;
+  __u32  first_fat;
+  __u32  magic;
   
   /* Check partition type for harddisk */
 //  if (((current_drive & 0x80) || (current_slice != 0))
@@ -76,9 +84,11 @@ fat_mount (void)
 //    return 0;
   
   /* Read bpb */
-  if (! devread (0, 0, sizeof (bpb), (char *) &bpb))
+  if (! devread (0, 0, sizeof (bpb), (unsigned long long)(unsigned int)(char *) &bpb, 0xedde0d90))
     return 0;
 
+  if (! bpb.fat_length && ! bpb.fat32_length)
+	goto label_exfat;
   /* Check if the number of sectors per cluster is zero here, to avoid
      zero division.  */
   if (bpb.sects_per_clust == 0)
@@ -99,15 +109,13 @@ fat_mount (void)
   FAT_SUPER->clustsize_bits
     = FAT_SUPER->sectsize_bits + log2_tmp (bpb.sects_per_clust);
   
-#ifndef STAGE1_5
   /* cluster size must be <= 32768 */
-  if (FAT_SUPER->clustsize_bits > 15)
-  {
-    if (debug > 0)
-	grub_printf ("Warning! FAT cluster size(=%d) larger than 32K!\n", 1 << (FAT_SUPER->clustsize_bits));
+//  if (FAT_SUPER->clustsize_bits > 15)
+//  {
+//    if (debug > 0)
+//	grub_printf ("Warning! FAT cluster size(=%d) larger than 32K!\n", (1 << (FAT_SUPER->clustsize_bits)));
     //return 0;
-  }
-#endif /* STAGE1_5 */
+//  }
 
   /* reserved sectors should not be 0 for fat_fs */
   if (FAT_CVT_U16 (bpb.reserved_sects) == 0)
@@ -144,7 +152,7 @@ fat_mount (void)
     FAT_SUPER->root_offset
     + ((FAT_SUPER->root_max + SECTOR_SIZE - 1) >> FAT_SUPER->sectsize_bits);
   FAT_SUPER->num_clust = 
-    2 + ((FAT_SUPER->num_sectors - FAT_SUPER->data_offset) 
+    2 + (((unsigned long)FAT_SUPER->num_sectors - FAT_SUPER->data_offset) 
 	 / bpb.sects_per_clust);
   FAT_SUPER->sects_per_clust = bpb.sects_per_clust;
   
@@ -163,6 +171,7 @@ fat_mount (void)
 	  FAT_SUPER->fat_offset += active_fat * FAT_SUPER->fat_length;
 	}
       
+      FAT_SUPER->fat_type = 32;
       FAT_SUPER->fat_size = 8;
       FAT_SUPER->root_cluster = bpb.root_cluster;
 
@@ -177,11 +186,13 @@ fat_mount (void)
       FAT_SUPER->root_cluster = -1;
       if (FAT_SUPER->num_clust > FAT_MAX_12BIT_CLUST) 
 	{
+	  FAT_SUPER->fat_type = 16;
 	  FAT_SUPER->fat_size = 4;
 	  FAT_SUPER->clust_eof_marker = 0xfff8;
 	} 
       else
 	{
+    	  FAT_SUPER->fat_type = 12;
 	  FAT_SUPER->fat_size = 3;
 	  FAT_SUPER->clust_eof_marker = 0xff8;
 	}
@@ -201,7 +212,7 @@ fat_mount (void)
   /* kbs: Media check on first FAT entry [ported from PUPA] */
 
   if (!devread(FAT_SUPER->fat_offset, 0,
-               sizeof(first_fat), (char *)&first_fat))
+               sizeof(first_fat), (unsigned long long)(unsigned int)(char *)&first_fat, 0xedde0d90))
     return 0;
 
   if (FAT_SUPER->fat_size == 8)
@@ -224,41 +235,184 @@ fat_mount (void)
      descriptor, even if it is a so-called superfloppy (e.g. an USB key).
      The check may be too strict for this kind of stupid BIOSes, as
      they overwrite the media descriptor.  */
-#ifndef STAGE1_5
 //  if ((first_fat | 0x8) != (magic | bpb.media | 0x8))
 //  if ((first_fat | 0x8) != (magic | 0xF8))
   if ((first_fat | 0xF) != (magic | 0xFF))
   {
     if (debug > 0)
-	grub_printf ("Warning! Invalid first FAT entry(=0x%X)!\n", first_fat);
+	printf_warning ("Warning! Invalid first FAT entry(=0x%X)!\n", first_fat);
     //return 0;
   }
-#endif /* STAGE1_5 */
 
+	fats_type = FAT_SUPER->fat_type;
+  FAT_SUPER->cached_fat = - 2 * FAT_CACHE_SIZE;
+  return 1;
+
+label_exfat:
+    /*  bytes per sector for exFAT must be 0 */
+    if (FAT_CVT_U16 (bpb.bytes_per_sect))  
+      return 0;
+
+    /* sector_bits - Power of 2. Minimum 9 (512 bytes per sector), 
+    maximum 12 (4096 bytes per sector) */
+    FAT_SUPER->sectsize_bits = bpb.sector_bits;
+
+//    if ((FAT_SUPER->sectsize_bits < 9) || (FAT_SUPER->sectsize_bits > 12))
+//      return 0;
+
+    /* sector size must be 512 */
+    if (FAT_SUPER->sectsize_bits != 9)
+      return 0;
+
+    /* spc_bits - Power of 2. Minimum 0 (1 sector per cluster), 
+    maximum 25 – BytesPerSectorShift, so max cluster size is 32 MB */
+    FAT_SUPER->clustsize_bits
+      = FAT_SUPER->sectsize_bits + bpb.spc_bits;
+
+    if (FAT_SUPER->clustsize_bits > 25)
+      return 0;
+
+    /* cluster size must be <= 32768 */
+    if (FAT_SUPER->clustsize_bits > 15)
+    {
+      if (debug > 0)
+	printf_warning ("Warning! FAT cluster size(=%d) larger than 32K!\n", (1 << (FAT_SUPER->clustsize_bits)));
+      //return 0;
+    }
+
+    /* Number of FATs(nearly always 1, 2 is for TexFAT only).  */
+    if ((unsigned char)(bpb.fat_count - 1) > 1)
+      return 0;
+
+    /* Fill in info about super block */
+    FAT_SUPER->num_sectors = bpb.sector_count;
+  
+    /* FAT offset and length */
+    FAT_SUPER->fat_offset = bpb.fat_sector_start;
+    FAT_SUPER->fat_length = bpb.fat_sector_count;
+    
+    FAT_SUPER->fat_type = 64;
+    FAT_SUPER->fat_size = 8;
+  
+    /* Data offset and number of clusters */
+    FAT_SUPER->data_offset = bpb.cluster_sector_start;
+
+    /* Rootdir offset and length for FAT12/16 */
+    FAT_SUPER->root_offset = FAT_SUPER->data_offset;
+    FAT_SUPER->root_max = 0;
+  
+    /* Test data offset */
+//    if (FAT_SUPER->data_offset != FAT_SUPER->fat_offset + bpb.fat_count * FAT_SUPER->fat_length)
+//      return 0;
+
+    FAT_SUPER->num_clust = bpb.cluster_count;
+    
+    FAT_SUPER->sects_per_clust = (unsigned long)1 << bpb.spc_bits;
+
+    if (FAT_CVT_U16(bpb.dir_entries))
+ 	  return 0;
+
+    /* ActiveFat 0 - First FAT and Allocation Bitmap are active, 1- Second. */ 
+    if (bpb.volume_state & 0x0001)
+    {
+	if (bpb.fat_count<2)
+ 	    return 0;
+	FAT_SUPER->fat_offset += FAT_SUPER->fat_length;
+    }
+
+
+    FAT_SUPER->root_cluster = bpb.rootdir_cluster;
+
+    FAT_SUPER->clust_eof_marker = EXFAT_CLUSTER_END;
+
+
+    /* Now do some sanity checks */
+
+    if (FAT_SUPER->num_clust <= 2
+        || (FAT_SUPER->fat_size * FAT_SUPER->num_clust / (2 * SECTOR_SIZE)
+   	  > FAT_SUPER->fat_length))
+      return 0;
+  
+    /* check first FAT entry */
+
+    if (!devread(FAT_SUPER->fat_offset, 0, sizeof(first_fat),
+	(unsigned long long)(unsigned int)(char *)&first_fat, 0xedde0d90))
+      return 0;
+    
+    if (first_fat != 0xfffffff8)
+    {
+      if (debug > 0)
+  	printf_warning ("Warning! Invalid first FAT entry(=0x%X)!\n", first_fat);
+      //return 0;
+    }
+
+	fats_type = FAT_SUPER->fat_type;
   FAT_SUPER->cached_fat = - 2 * FAT_CACHE_SIZE;
   return 1;
 }
 
-unsigned long
-fat_read (char *buf, unsigned long len)
+unsigned long long
+fat_read (unsigned long long buf, unsigned long long len, unsigned long write)
 {
   unsigned long logical_clust;
   unsigned long offset;
-  unsigned long ret = 0;
-  unsigned long size;
+  unsigned long long ret = 0;
+  unsigned long long size;
+//	unsigned long long sector;
+#define sector FAT_SUPER->vol_sector
+
+  if (! len)
+    return 0;
   
-  if (FAT_SUPER->file_cluster < 0)
+  if (FAT_SUPER->file_cluster == MAXINT)
     {
-      /* root directory for fat16 */
+      if (! FAT_SUPER->root_max)
+	return 0;
+      if (FAT_SUPER->root_max <= filepos)
+	return 0;
+      if (FAT_SUPER->fat_type > 16)
+	return 0;
+      /* root directory for FAT12/FAT16 */
       size = FAT_SUPER->root_max - filepos;
       if (size > len)
  	size = len;
-      if (!devread(FAT_SUPER->root_offset, filepos, size, buf))
+		sector = FAT_SUPER->root_offset;
+      if (!devread(FAT_SUPER->root_offset, filepos, size, buf, 0xedde0d90))
  	return 0;
       filepos += size;
       return size;
     }
   
+  
+  if  ((FAT_SUPER->fat_type == 64) && (FAT_SUPER->contig_size))
+  {
+//      unsigned long sector;
+//      sector = FAT_SUPER->data_offset + ((FAT_SUPER->file_cluster - 2)
+			sector = (unsigned long long)FAT_SUPER->data_offset + ((unsigned long long)(FAT_SUPER->file_cluster - 2)
+		<< (FAT_SUPER->clustsize_bits - FAT_SUPER->sectsize_bits));
+
+      if ( filepos >= FAT_SUPER->contig_size )
+        return 0; 
+      else
+        if ( filepos + len > FAT_SUPER->contig_size ) 
+    	    size = FAT_SUPER->contig_size - filepos;
+        else 
+    	    size = len;
+        
+      disk_read_func = disk_read_hook;
+      
+      devread(sector, filepos, size, buf, write);
+      
+      disk_read_func = NULL;
+      
+      if (buf)
+	buf += size;
+      ret = size;
+      filepos += size;
+      FAT_SUPER->current_cluster_num = 0;
+      FAT_SUPER->current_cluster = FAT_SUPER->file_cluster;
+      return errnum ? 0 : ret;
+  }
   logical_clust = filepos >> FAT_SUPER->clustsize_bits;
   offset = (filepos & ((1 << FAT_SUPER->clustsize_bits) - 1));
   if (logical_clust < FAT_SUPER->current_cluster_num)
@@ -269,23 +423,27 @@ fat_read (char *buf, unsigned long len)
   
   while (len > 0)
     {
-      unsigned long sector;
+//      unsigned long sector;
       while (logical_clust > FAT_SUPER->current_cluster_num)
 	{
 	  /* calculate next cluster */
-	  unsigned long fat_entry = 
-	    FAT_SUPER->current_cluster * FAT_SUPER->fat_size;
+//	  unsigned long fat_entry = 
+//	    FAT_SUPER->current_cluster * FAT_SUPER->fat_size;
+		unsigned long long fat_entry =
+	    (unsigned long long)FAT_SUPER->current_cluster * FAT_SUPER->fat_size;
 	  unsigned long next_cluster;
 	  unsigned long cached_pos = (fat_entry - FAT_SUPER->cached_fat);
 	  
-	  if (cached_pos < 0 || 
+	  if (fat_entry < FAT_SUPER->cached_fat || 
 	      (cached_pos + FAT_SUPER->fat_size) > 2*FAT_CACHE_SIZE)
 	    {
 	      FAT_SUPER->cached_fat = (fat_entry & ~(2*SECTOR_SIZE - 1));
 	      cached_pos = (fat_entry - FAT_SUPER->cached_fat);
-	      sector = FAT_SUPER->fat_offset
-		+ FAT_SUPER->cached_fat / (2*SECTOR_SIZE);
-	      if (!devread (sector, 0, FAT_CACHE_SIZE, (char*) FAT_BUF))
+//	      sector = FAT_SUPER->fat_offset
+//		+ FAT_SUPER->cached_fat / (2*SECTOR_SIZE);
+				sector = (unsigned long long)FAT_SUPER->fat_offset
+		+ (unsigned long long)FAT_SUPER->cached_fat / (2*SECTOR_SIZE);
+	      if (!devread (sector, 0, FAT_CACHE_SIZE, (unsigned long long)(unsigned int)(char*) FAT_BUF, 0xedde0d90))
 		return 0;
 	    }
 	  next_cluster = * (unsigned long *) (FAT_BUF + (cached_pos >> 1));
@@ -310,7 +468,8 @@ fat_read (char *buf, unsigned long len)
 	  FAT_SUPER->current_cluster_num++;
 	}
       
-      sector = FAT_SUPER->data_offset + ((FAT_SUPER->current_cluster - 2)
+//      sector = FAT_SUPER->data_offset + ((FAT_SUPER->current_cluster - 2)
+			sector = (unsigned long long)FAT_SUPER->data_offset + ((unsigned long long)(FAT_SUPER->current_cluster - 2)
 		<< (FAT_SUPER->clustsize_bits - FAT_SUPER->sectsize_bits));
       
       size = (1 << FAT_SUPER->clustsize_bits) - offset;
@@ -320,12 +479,13 @@ fat_read (char *buf, unsigned long len)
       
       disk_read_func = disk_read_hook;
       
-      devread(sector, offset, size, buf);
+      devread(sector, offset, size, buf, write);
       
       disk_read_func = NULL;
       
       len -= size;	/* len always >= 0 */
-      buf += size;
+      if (buf)
+	buf += size;
       ret += size;
       filepos += size;
       logical_clust++;
@@ -334,6 +494,7 @@ fat_read (char *buf, unsigned long len)
   return errnum ? 0 : ret;
 }
 
+char vol_name[256];
 int
 fat_dir (char *dirname)
 {
@@ -341,9 +502,18 @@ fat_dir (char *dirname)
   unsigned short *filename = (unsigned short *) NAME_BUF; /* unicode */
   unsigned char *utf8 = (unsigned char *) UTF8_BUF; /* utf8 filename */
   int attrib = FAT_ATTRIB_DIR;
-//#ifndef STAGE1_5
+  int exfat_attrib = FAT_ATTRIB_DIR;
+//  int exfat_flags = 0;
+	unsigned char exfat_flags = 0;
+  int exfat_secondarycount = 0;
+  int exfat_namecount = 0;
+  int exfat_nextentry =  EXFAT_ENTRY_FILE;
+  unsigned long long exfat_filemax = 0;
+  unsigned long exfat_file_cluster = 0;
+	int empty = 0;
+  int i, j;
+  
 //  int do_possibilities = 0;
-//#endif
   
   /* XXX I18N:
    * the positions 2,4,6 etc are high bytes of a 16 bit unicode char 
@@ -355,6 +525,9 @@ fat_dir (char *dirname)
   
   FAT_SUPER->file_cluster = FAT_SUPER->root_cluster;
   
+  if (FAT_SUPER->fat_type == 64)
+	FAT_SUPER->contig_size = 0;/* root directory always not contiguous */
+
   /* main loop to find desired directory entry */
  loop:
   filepos = 0;
@@ -389,44 +562,40 @@ fat_dir (char *dirname)
   filemax = MAXINT;
   
   /* check if the dirname ends in a slash(saved in CH) and end it in a NULL */
-  //for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/'; rest++);
-  for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/'; rest++)
+  for (rest = dirname; (ch = *rest) /*&& !isspace (ch)*/ && ch != '/'; rest++)
   {
+#if 0
 	if (ch == '\\')
 	{
 		rest++;
 		if (! (ch = *rest))
 			break;
 	}
+#endif
   }
   
   *rest = 0;
   
-//# ifndef STAGE1_5
 //  if (print_possibilities && ch != '/')
 //    do_possibilities = 1;
-//# endif
   
   while (1)
     {
       /* read the dir entry */
-      if (fat_read (dir_buf, FAT_DIRENTRY_LENGTH) != FAT_DIRENTRY_LENGTH
+      if (fat_read ((unsigned long long)(unsigned int)dir_buf, FAT_DIRENTRY_LENGTH, 0xedde0d90) != FAT_DIRENTRY_LENGTH
 		/* read failure */
 	  || dir_buf[0] == 0 /* end of dir entry */)
 	{
 	  if (errnum == 0)
 	    {
-# ifndef STAGE1_5
 	      if (print_possibilities < 0)
 		{
 		  /* previously succeeded, so return success */
-#if 0
-		  putchar ('\n');
-#endif
 		  *rest = ch;	/* XXX: Should restore the byte? */
+			if (!empty)
+				return !(errnum = ERR_FILE_NOT_FOUND);
 		  return 1;
 		}
-# endif /* STAGE1_5 */
 	      
 	      errnum = ERR_FILE_NOT_FOUND;
 	    }
@@ -435,6 +604,57 @@ fat_dir (char *dirname)
 	  return 0;
 	}
       
+      if (FAT_SUPER->fat_type == 64)
+      {
+				if ((EXFAT_DIRENTRY_ATTRIB (dir_buf) == EXFAT_ENTRY_LABEL || EXFAT_DIRENTRY_ATTRIB (dir_buf) == 3)
+					&& *dirname == '$' && *(dirname+1) == 'v')
+				return 1;
+	if (EXFAT_DIRENTRY_ATTRIB (dir_buf) != exfat_nextentry)
+	{
+	  exfat_nextentry = EXFAT_ENTRY_FILE;
+	  continue;
+	}
+	{
+	  switch (EXFAT_DIRENTRY_ATTRIB (dir_buf))
+	  {
+	    case EXFAT_ENTRY_FILE:
+		    exfat_attrib = (*(unsigned short *)(dir_buf+4));
+		    exfat_secondarycount = (*(unsigned char *)(dir_buf+1));
+		    if ((exfat_secondarycount<2)||(exfat_secondarycount>18))
+			/* invalid */
+			exfat_nextentry = EXFAT_ENTRY_FILE;
+		    else 
+			exfat_secondarycount --;        		
+		    exfat_namecount = 0;
+		    exfat_nextentry = EXFAT_ENTRY_FILE_INFO;
+		    continue;
+	    case EXFAT_ENTRY_FILE_INFO:
+		    exfat_filemax = (*(unsigned long long *)(dir_buf+8));
+		    exfat_file_cluster = (*(unsigned long *)(dir_buf+20));
+//		    exfat_flags = (*(unsigned short *)(dir_buf+1));
+				exfat_flags = (*(unsigned char *)(dir_buf+1));
+		    exfat_nextentry = EXFAT_ENTRY_FILE_NAME;
+		    continue;
+	    case EXFAT_ENTRY_FILE_NAME:
+		    for (i=0; i < 15; i++)
+			filename[i+(15*exfat_namecount)]
+				= *(unsigned short *)(dir_buf+2+(i<<1));
+		    exfat_namecount++;
+		    filename[15*exfat_namecount] = 0;
+		    if (exfat_namecount < exfat_secondarycount)
+		    {
+			exfat_nextentry = EXFAT_ENTRY_FILE_NAME;
+			continue;
+		    }
+		    exfat_nextentry = EXFAT_ENTRY_FILE;
+		    goto valid_filename;
+	    default:
+		    exfat_nextentry = EXFAT_ENTRY_FILE;
+		    continue;
+	  }
+	}
+      }
+
       if (FAT_DIRENTRY_ATTRIB (dir_buf) == FAT_ATTRIB_LONGNAME)
 	{
 	  /* This is a long filename.  The filename is build from back
@@ -449,7 +669,7 @@ fat_dir (char *dirname)
 	   * We just write the part of the long filename this entry
 	   * describes and continue with the next dir entry.
 	   */
-	  int i, offset;
+	  int offset;
 	  unsigned char id = FAT_LONGDIR_ID(dir_buf);
 	  
 	  if ((id & 0x40)) 
@@ -474,13 +694,14 @@ fat_dir (char *dirname)
 	    filename[offset+i] = *(unsigned short *)(dir_buf+longdir_pos[i]);
 	  continue;
 	}
-      
+		if ((FAT_DIRENTRY_ATTRIB (dir_buf) == FAT_ATTRIB_VOL)
+			&& *dirname == '$' && *(dirname+1) == 'v')
+	return 1;
       if (!FAT_DIRENTRY_VALID (dir_buf))
 	continue;
-      
+
       if (alias_checksum != -1 && slot == 0)
 	{
-	  int i;
 	  unsigned char sum;
 	  
 	  slot = -2;
@@ -490,16 +711,16 @@ fat_dir (char *dirname)
 	  if (sum == alias_checksum)
 	    {
 	      goto valid_filename;
-//# ifndef STAGE1_5
 //	      if (do_possibilities)
 //		goto print_filename;
-//# endif /* STAGE1_5 */
 //	      
 //	      if (substring (dirname, filename, 1) == 0)
 //		break;
 	    }
 	}
-      
+	
+#if 0
+short_name:
       /* XXX convert to 8.3 filename format here */
       {
 	int i, j, c;
@@ -517,10 +738,33 @@ fat_dir (char *dirname)
 	
 	filename[i + j] = 0;
       }
+#endif
+
+short_name:
+      /* XXX convert to 8.3 filename format here */
+      {
+	unsigned int c, y;
+#define TOLOWER(c,y) (((y) && ((unsigned)((c) - 'A') < 26)) ? ((c)|0x20) : (c))
+	
+	y = (dir_buf[12] & 0x08);	// filename base in lower case
+	for (i = 0; i < 8 && (c = filename[i] = TOLOWER (dir_buf[i], y))
+	       && /*!isspace (c)*/ c != ' '; i++);
+	
+	filename[i++] = '.';
+	
+	y = (dir_buf[12] & 0x10);	// filename extension in lower case
+	for (j = 0; j < 3 && (c = filename[i+j] = TOLOWER (dir_buf[8+j], y))
+	       && /*!isspace (c)*/ c != ' '; j++);
+	
+	if (j == 0)
+	  i--;
+	
+	filename[i + j] = 0;
+      }
+
       
 valid_filename:
-      unicode_to_utf8 (filename, utf8, 832);
-# ifndef STAGE1_5
+		j = unicode_to_utf8 (filename, utf8, 255);
       if (print_possibilities && ch != '/')
 	{
 //	print_filename:
@@ -528,18 +772,47 @@ valid_filename:
 	    {
 	      if (print_possibilities > 0)
 		print_possibilities = -print_possibilities;
-	      print_a_completion ((char *)utf8);
+				unsigned long long clo64 = current_color_64bit;
+				unsigned long clo = current_color;
+				if ((FAT_SUPER->fat_type == 64 && exfat_attrib & 0x10) || (FAT_SUPER->fat_type != 64 && FAT_DIRENTRY_ATTRIB (dir_buf) & 0x10))
+				{
+					if (current_term->setcolorstate)
+						current_term->setcolorstate (COLOR_STATE_HIGHLIGHT);
+					current_color_64bit = (current_color_64bit & 0xffffff) | (clo64 & 0xffffff00000000);
+					current_color = (current_color & 0x0f) | (clo & 0xf0);
+				}
+	      print_a_completion ((char *)utf8, 1);
+				current_color_64bit = clo64;
+				current_color = clo;
+			if (*(char *)utf8 != 0x2e)
+				empty = 1;
 	    }
 	  continue;
 	}
-# endif /* STAGE1_5 */
       
       if (substring (dirname, (char *)utf8, 1) == 0)
 	break;
+	 if (alias_checksum != -1)
+	  {
+ 		alias_checksum = -1;
+		goto short_name;
+	  }
     }
   
   *(dirname = rest) = ch;
   
+  if (FAT_SUPER->fat_type == 64)
+  {
+    attrib = exfat_attrib;
+    filemax = exfat_filemax;
+    FAT_SUPER->file_cluster = exfat_file_cluster;
+    if (exfat_flags & EXFAT_FLAG_CONTIGUOUS) /* NoFatChain */
+	FAT_SUPER->contig_size = (filemax + ((1 << FAT_SUPER->clustsize_bits) - 1)) & ~((1 << FAT_SUPER->clustsize_bits) - 1);
+    else 
+	FAT_SUPER->contig_size = 0;
+    goto loop;
+  }
+
   attrib = FAT_DIRENTRY_ATTRIB (dir_buf);
   filemax = FAT_DIRENTRY_FILELENGTH (dir_buf);
   FAT_SUPER->file_cluster = FAT_DIRENTRY_FIRST_CLUSTER (dir_buf);

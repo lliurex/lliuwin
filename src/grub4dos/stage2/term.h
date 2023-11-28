@@ -31,10 +31,16 @@ typedef enum
   /* represents the user defined colors for normal text */
   COLOR_STATE_NORMAL,
   /* represents the user defined colors for highlighted text */
-  COLOR_STATE_HIGHLIGHT
+  COLOR_STATE_HIGHLIGHT,
+  /* represents the user defined colors for help text */
+  COLOR_STATE_HELPTEXT,
+  /* represents the user defined colors for heading line */
+  COLOR_STATE_HEADING,
+  /* represents the user defined colors for border */
+  COLOR_STATE_BORDER,
+  /*Number of user defined colors*/
+  COLOR_STATE_MAX
 } color_state;
-
-#ifndef STAGE1_5
 
 /* Flags for representing the capabilities of a terminal.  */
 /* Some notes about the flags:
@@ -60,10 +66,12 @@ struct term_entry
   const char *name;
   /* The feature flags defined above.  */
   unsigned long flags;
+  /* Default for screen width in chars if not specified */
+  unsigned short chars_per_line;
   /* Default for maximum number of lines if not specified */
   unsigned short max_lines;
   /* Put a character.  */
-  void (*putchar) (int c);
+  unsigned int (*putchar) (unsigned int c, unsigned int max_width);
   /* Check if any input character is available.  */
   int (*checkkey) (void);
   /* Get a character.  */
@@ -78,9 +86,9 @@ struct term_entry
   void (*setcolorstate) (color_state state);
   /* Set the normal color and the highlight color. The format of each
      color is VGA's.  */
-  void (*setcolor) (int normal_color, int highlight_color);
+  void (*setcolor) (unsigned long state,unsigned long long color[]);
   /* Turn on/off the cursor.  */
-  int (*setcursor) (int on);
+  void (*setcursor) (unsigned long on);
 
   /* function to start a terminal */
   int (*startup) (void);
@@ -94,25 +102,18 @@ extern struct term_entry term_table[];
    a single terminal is enabled normally.  */
 extern struct term_entry *current_term;
 
-#endif /* ! STAGE1_5 */
-
 /* The console stuff.  */
-extern int console_current_color;
-void console_putchar (int c);
+unsigned int console_putchar (unsigned int c, unsigned int max_width);
 
-#ifndef STAGE1_5
-int console_checkkey (void);
-int console_getkey (void);
 int console_getxy (void);
 void console_gotoxy (int x, int y);
 void console_cls (void);
 void console_setcolorstate (color_state state);
-void console_setcolor (int normal_color, int highlight_color);
-int console_setcursor (int on);
-#endif
+void console_setcolor(unsigned long state,unsigned long long color[]);
+void console_setcursor (unsigned long on);
 
 #ifdef SUPPORT_SERIAL
-void serial_putchar (int c);
+unsigned int serial_putchar (unsigned int c, unsigned int max_width);
 int serial_checkkey (void);
 int serial_getkey (void);
 int serial_getxy (void);
@@ -122,32 +123,25 @@ void serial_setcolorstate (color_state state);
 #endif
 
 #ifdef SUPPORT_HERCULES
-void hercules_putchar (int c);
+unsigned int hercules_putchar (unsigned int c, unsigned int max_width);
 int hercules_getxy (void);
 void hercules_gotoxy (int x, int y);
 void hercules_cls (void);
-void hercules_setcolorstate (color_state state);
-void hercules_setcolor (int normal_color, int highlight_color);
-int hercules_setcursor (int on);
+void hercules_setcursor (unsigned long on);
 #endif
 
 #ifdef SUPPORT_GRAPHICS
-extern int foreground, background, border, graphics_inited;
+extern unsigned long foreground, background, graphics_inited;
 
 void graphics_set_splash(char *splashfile);
 int set_videomode (int mode);
-void graphics_putchar (int c);
+unsigned int graphics_putchar (unsigned int c, unsigned int max_width);
 int graphics_getxy(void);
 void graphics_gotoxy(int x, int y);
 void graphics_cls(void);
-void graphics_setcolorstate (color_state state);
-void graphics_setcolor (int normal_color, int highlight_color);
-int graphics_setcursor (int on);
 int graphics_init(void);
 void graphics_end(void);
 
-int hex(int v);
-void graphics_set_palette(int idx, int red, int green, int blue);
 #endif /* SUPPORT_GRAPHICS */
 
 #endif /* ! GRUB_TERM_HEADER */

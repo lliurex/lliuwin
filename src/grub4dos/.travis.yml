@@ -1,0 +1,54 @@
+language: c
+sudo: enabled
+compiler: gcc-11
+os:
+  - linux
+addons:
+  ssh_known_hosts:
+    - github.com
+    - git.coding.net
+    - git.dev.tencent.com
+  apt:
+    packages: [gcc-11,gcc-11-multilib,nasm,upx,p7zip-full,zip,autoconf,automake,make,patch,npm]
+    sources: 
+      - ubuntu-toolchain-r-test
+    
+before_install:
+  - git config --global user.name "chenall"
+  - git config --global user.email "chenall.cn@gmail.com"
+#  - sudo apt-get update -y
+#  - sudo apt-get install bison curl flex git gnupg git-core gperf build-essential zip curl
+#  - sudo apt-get install build-essential autoconf automake make patch git gcc-multilib
+#  - sudo apt-get install p7zip-full zip 
+
+before_script:
+# Download the toolchain
+   - git clone --depth=1 http://git.ipxe.org/ipxe.git
+
+script:
+  - ./build
+
+after_success:
+  - eval $SUCCESS
+
+notifications:
+  email:
+    recipents:
+      - chenall.cn@gmail.com
+    on_failure: never
+    
+before_deploy:
+    - export TRAVIS_TAG=${TRAVIS_TAG:-$(date -u +%Y-%m-%d)-$(git log --format=%h -1)}
+    - git tag $TRAVIS_TAG
+
+branches:
+  only: 0.4.6a
+
+deploy:
+    provider: releases
+    api_key: $GITHUB_TOKEN
+    file: grub4dos-$(cat grub4dos_version)-$(date -u +%Y-%m-%d).7z
+    skip_cleanup: true
+    overwrite: true
+    on:
+      branch: 0.4.6a
