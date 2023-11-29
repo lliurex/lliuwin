@@ -7,7 +7,9 @@ Forked from wubiefi.
 
 LliuWin is the Windows LliureX Installer. LliuWin installs LliureX inside a file within a windows partition, and thus it does not require CD burning or dedicated partitions, yet the installation is a dual boot setup identical to a normal installation.
 
-For generating the system image simply run *./generate_lliuwin_img.sh [release]*
+For generating the system image simply run *./generate_lliuwin_img.sh process [release]*
+
+After install finished chroot into the lliuwin disk and run some package integrity checks and ensure that lliuwin-wizard package is installed. If isn't the case then fix the installation with apt wizardry. 
 
 For building the windows installer install msitools and wixl from ubuntu repositories and msi-packager as root from npm (*npm install -global msi-packager*)
 
