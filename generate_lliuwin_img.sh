@@ -90,7 +90,7 @@ function allocate_img()
 	echo "Populating $LOCAL_IMG"
 	fallocate -l $IMG_SIZE $LOCAL_IMG
 	echo "Formatting"
-	mkfs.ext3 $LOCAL_IMG
+	mkfs.ext4 $LOCAL_IMG
 }
 
 function show_help()
@@ -98,7 +98,7 @@ function show_help()
 	printf "\n"
 	printf "Helper for building a lliurex rootfs for Lliuwin\n"
 	printf "Usage:\n"
-	printf "\t$0 [bionic|focal|jammy|...]. The release is optional, defaults to $RELEASE\n"
+	printf "\t$0 OPTION [bionic|focal|jammy|...]. The release is optional, defaults to $RELEASE\n"
 	printf "Config is done editing this shell\n"
 	printf "Options:\n"
 	printf "\tprocess: Make all. Usually you want this, other options are only for developing/testing the image.\n"
