@@ -160,6 +160,20 @@ function allocate_img()
 	mkfs.ext4 $LOCAL_IMG
 }
 
+function compress_img
+{
+	rm -v $LOCAL_IMG.tar.xz 2>/dev/null
+	echo "Compressing $LOCAL_IMG"
+FROMSIZE=`du -sk --apparent-size ${LOCAL_IMG} | cut -f 1`;
+CHECKPOINT=`echo ${FROMSIZE}/50 | bc`;
+echo "Estimated: [==================================================]";
+
+echo -n "Progress:  ["
+tar --transform='s!.*/!!' -c --record-size=1K --checkpoint="${CHECKPOINT}" --checkpoint-action="ttyout=>" -f - "${LOCAL_IMG}" 2>/dev/null | xz > "$(dirname ${LOCAL_IMG})/$(basename ${LOCAL_IMG}).tar.xz" 
+echo "]"
+
+}
+
 function clean()
 {
 	umount_chroot
@@ -218,6 +232,10 @@ do
 		"--meta")
 			META=1
 			;;
+		"--compress")
+			COMPRESS=1
+			ACTION=$(expr $ACTION + 1)
+			;;
 		"--clean")
 			CLEAN=1
 			ACTION=$(expr $ACTION + 1)
@@ -255,6 +273,7 @@ then
 	configure_chroot
 	install_meta
 	umount_chroot
+	compress_img
 elif [ ! -z $ALLOCATE ]
 then
 	allocate_img
@@ -279,6 +298,9 @@ then
 	configure_chroot
 	enter_chroot
 	umount_chroot
+elif [ ! -z $COMPRESS ]
+then
+	compress_img
 elif [ ! -z $CLEAN ]
 then
 	clean
