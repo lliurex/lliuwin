@@ -136,12 +136,13 @@ function umount_chroot()
 	umount $LOCAL_CHROOT/dev
 	umount $LOCAL_CHROOT/proc 
 	umount $LOCAL_CHROOT/sys 
+	rm $LOCAL_CHROOT/root/.bash_history 2>/dev/null
+	rm $LOCAL_CHROOT/root/var/cache/apt/archives/* 2>/dev/null
+	rm -r $LOCAL_CHROOT/tmp/* 2>/dev/null
 	umount $LOCAL_CHROOT
 	if [ $?==0 ]
 	then
 		echo "$LOCAL_CHROOT disabled"
-		rm $LOCAL_CHROOT/root/.bash_history 2>/dev/null
-		rm $LOCAL_CHROOT/root/var/cache/apt/archives/* 2>/dev/null
 	else
 		echo "umount ERROR $LOCAL_CHROOT: $?"
 	fi
