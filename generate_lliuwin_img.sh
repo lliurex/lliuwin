@@ -278,12 +278,12 @@ then
 	configure_chroot
 	install_meta
 	umount_img
-	echo -n "Compress the image? [y/n]: "
-	read RESP
-	if [[ $RESP == "y" ]]
-	then
+#	echo -n "Compress the image? [y/n]: "
+#	read RESP
+#	if [[ $RESP == "y" ]]
+#	then
 		compress_img
-	fi
+#	fi
 elif [ ! -z $ALLOCATE ]
 then
 	allocate_img
