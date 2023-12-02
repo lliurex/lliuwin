@@ -1,14 +1,14 @@
 #!/bin/bash
 # Copyright 2023 LliureX Team
 
-#This script attempts to create a lliurex system inside a ext3 image
+#This script attempts to create a lliurex system inside a ext4 image
 
 LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
 LOCAL_IMG=/home/${SUDO_USER}/lliuwin2.img
 SIZE=11G
 RELEASE=jammy
 LLIUREX_META=lliurex-meta-desktop-lite
-EXTRA_PACKAGES="linux-firmware lliuwin-wizard"
+EXTRA_PACKAGES="linux-firmware lliuwin-wizard rebost-gui"
 UBUNTU_PACKAGES="zram-config"
 
 function show_help()
@@ -41,6 +41,18 @@ function generate_sources
 	echo "deb http://lliurex.net/$RELEASE $RELEASE-updates main multiverse restricted universe">>$LOCAL_CHROOT/etc/apt/sources.list
 }
 
+function mount_binds()
+{
+	echo "Binding mounts"
+	mount --bind /dev $LOCAL_CHROOT/dev
+	mount --bind /dev/pts $LOCAL_CHROOT/dev/pts
+	mount --bind /sys $LOCAL_CHROOT/sys
+	mount --bind /proc $LOCAL_CHROOT/proc 
+	echo "proc /proc proc defaults 0 0" > $LOCAL_CHROOT/etc/fstab
+	echo "sysfs /sys sysfs defaults 0 0" >> $LOCAL_CHROOT/etc/fstab
+	echo "tmpfs /tmp tmpfs defaults 0 0" >> $LOCAL_CHROOT/etc/fstab
+}
+
 function mount_img()
 {
 	if [ -z $CHKMOUNT  ]
@@ -55,14 +67,8 @@ function mount_img()
 		mount $LOCAL_IMG $LOCAL_CHROOT
 		if [ ! -z $ENABLE ]
 		then
-			echo "Binding mounts"
-			mount --bind /dev $LOCAL_CHROOT/dev
-			mount --bind /dev/pts $LOCAL_CHROOT/dev/pts
-			echo "proc $LOCAL_CHROOT/proc proc defaults 0 0" > /etc/fstab
-			echo "sysfs $LOCAL_CHROOT/sys sysfs defaults 0 0" >> /etc/fstab
-			mount --bind /sys $LOCAL_CHROOT/sys
+			mount_binds
 		fi
-		mount --bind /proc $LOCAL_CHROOT/proc 
 		echo "Mount ${LOCAL_CHROOT}: $?"
 		CHKMOUNT=1
 	else
@@ -73,8 +79,6 @@ function mount_img()
 
 function debootstrap_img()
 {
-	mkdir $LOCAL_CHROOT 2>/dev/null
-	mount $LOCAL_IMG $LOCAL_CHROOT
 	debootstrap  --no-check-gpg --arch amd64 $RELEASE $LOCAL_CHROOT http://lliurex.net/$RELEASE
 	if [ $? -ne 0 ]
 	then 
@@ -85,12 +89,10 @@ function debootstrap_img()
 	echo "LANG=$LANG" >> $LOCAL_CHROOT/etc/profile
 	echo "LANGUAGE=$LANGUAGE" >> $LOCAL_CHROOT/etc/profile
 	echo "LC_ALL=$LC_ALL" >> $LOCAL_CHROOT/etc/profile
-	umount $LOCAL_CHROOT
 }
 
 function configure_chroot()
 {
-	mount_img
 	generate_sources
 	touch $LOCAL_CHROOT/etc/mtab
 }
@@ -130,7 +132,7 @@ EOF
 	generate_sources
 }
 
-function umount_chroot()
+function umount_img()
 {
 	umount $LOCAL_CHROOT/dev/pts
 	umount $LOCAL_CHROOT/dev
@@ -172,12 +174,11 @@ function compress_img
 	echo -n "Progress:  ["
 	tar --transform='s!.*/!!' -c --record-size=1K --checkpoint="${CHECKPOINT}" --checkpoint-action="ttyout=>" -f - "${LOCAL_IMG}" 2>/dev/null | xz > "$(dirname ${LOCAL_IMG})/$(basename ${LOCAL_IMG}).tar.xz" 
 	echo "]"
-
 }
 
 function clean()
 {
-	umount_chroot
+	umount_img
 	rm -r $LOCAL_CHROOT
 	rm $LOCAL_IMG
 
@@ -269,36 +270,48 @@ fi
 only_root
 if [ ! -z $PROCESS ]
 then
+	umount_img
 	allocate_img
+	mount_img
 	debootstrap_img
+	mount_binds
 	configure_chroot
 	install_meta
-	umount_chroot
-	compress_img
+	umount_img
+	echo -n "Compress the image? [y/n]: "
+	read RESP
+	if [[ $RESP == "y" ]]
+	then
+		compress_img
+	fi
 elif [ ! -z $ALLOCATE ]
 then
 	allocate_img
 elif [ ! -z $DEBOOTSTRAP ]
 then
+	mount_img
 	debootstrap_img
+	umount_img
 elif [ ! -z $MOUNT ]
 then
-	configure_chroot
+	mount_img
 elif [ ! -z $UMOUNT ]
 then
-	umount_chroot
+	umount_img
 elif [ ! -z $INSTALL ]
 then
 	ENABLE=1
+	mount_img
 	configure_chroot
 	install_meta
-	umount_chroot
+	umount_img
 elif [ ! -z $CHROOT ]
 then
 	ENABLE=1
+	mount_img
 	configure_chroot
 	enter_chroot
-	umount_chroot
+	umount_img
 elif [ ! -z $COMPRESS ]
 then
 	compress_img
