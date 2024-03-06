@@ -28,6 +28,7 @@ function show_help()
 	printf "\t--chroot: chroot to lliuwin image\n"
 	printf "\t--clean: Removes the image\n"
 	printf "\t--meta lliurex-meta-package: Sets target metapackage to lliurex-meta-package\n"
+	printf "\t--compress: Compress lliuwin.img\n"
 	printf "\t--help: Shows this missage\n"
 	printf "\n"
 	exit 0
