@@ -19,12 +19,13 @@ function show_help()
 	printf "\t$0 --OPTION [option args]. The release is optional, defaults to $RELEASE\n"
 	printf "Config of extra-packages is done editing this shell\n"
 	printf "Options:\n"
-	printf "\t--process [release]: Make all. Usually you want this. Release defaults to $RELEASE\n"
+	printf "\t--process [release]: Make all. Release defaults to $RELEASE\n"
 	printf "\t--allocate [SIZE]: Allocates a file of SIZE ($SIZE by default)\n"
 	printf "\t--debootstrap: Mounts the rootfs file for debootstrap\n"
 	printf "\t--mount [--enable]: Mounts the chroot. If --enable then also mount bindings\n"
 	printf "\t--umount: Umounts the chroot\n"
 	printf "\t--install: Install the meta-package inside the chroot\n"
+	printf "\t--upgrade: Upgrades the image (needs a generated chroot)\n"
 	printf "\t--chroot: chroot to lliuwin image\n"
 	printf "\t--clean: Removes the image\n"
 	printf "\t--meta lliurex-meta-package: Sets target metapackage to lliurex-meta-package\n"
@@ -133,6 +134,15 @@ EOF
 	generate_sources
 }
 
+function upgrade_image()
+{
+	cmd="apt-get -y dist-upgrade"
+	cat << EOF | chroot $LOCAL_CHROOT
+	lliurex-upgrade -u
+	apt-get autoremove -y
+	apt clean
+EOF
+}
 function umount_img()
 {
 	umount $LOCAL_CHROOT/dev/pts
@@ -227,6 +237,10 @@ do
 			INSTALL=1
 			ACTION=$(expr $ACTION + 1)
 			;;
+		"--upgrade")
+			UPGRADE=1
+			ACTION=$(expr $ACTION + 1)
+			;;
 		"--chroot")
 			CHROOT=1
 			ACTION=$(expr $ACTION + 1)
@@ -304,6 +318,13 @@ then
 	mount_img
 	configure_chroot
 	install_meta
+	umount_img
+elif [ ! -z $UPGRADE ]
+then
+	ENABLE=1
+	mount_img
+	configure_chroot
+	upgrade_image
 	umount_img
 elif [ ! -z $CHROOT ]
 then
