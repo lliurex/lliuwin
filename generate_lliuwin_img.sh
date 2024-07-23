@@ -30,6 +30,7 @@ function show_help()
 	printf "\t--clean: Removes the image\n"
 	printf "\t--meta lliurex-meta-package: Sets target metapackage to lliurex-meta-package\n"
 	printf "\t--compress: Compress lliuwin.img\n"
+	printf "\t--img: Name of the .img file\n"
 	printf "\t--help: Shows this missage\n"
 	printf "\n"
 	exit 0
@@ -41,6 +42,11 @@ function generate_sources
 	echo "deb http://lliurex.net/$RELEASE $RELEASE main multiverse preschool restricted universe">$LOCAL_CHROOT/etc/apt/sources.list
 	echo "deb http://lliurex.net/$RELEASE $RELEASE-security main multiverse restricted universe">>$LOCAL_CHROOT/etc/apt/sources.list
 	echo "deb http://lliurex.net/$RELEASE $RELEASE-updates main multiverse restricted universe">>$LOCAL_CHROOT/etc/apt/sources.list
+}
+
+function disableGrubTheme
+{
+	echo "GRUB_THEME=" > /etc/default/grub.d/99_zlliuwin-theme.cfg
 }
 
 function mount_binds()
@@ -96,6 +102,7 @@ function debootstrap_img()
 function configure_chroot()
 {
 	generate_sources
+	[ -e $LOCAL_CHROOT/etc/default/grub.d/99_zlliuwin-theme.cfg ] || disableGrubTheme
 	touch $LOCAL_CHROOT/etc/mtab
 }
 
@@ -152,6 +159,7 @@ function umount_img()
 	rm $LOCAL_CHROOT/root/.bash_history 2>/dev/null
 	rm $LOCAL_CHROOT/root/var/cache/apt/archives/* 2>/dev/null
 	rm -r $LOCAL_CHROOT/tmp/* 2>/dev/null
+	rm $LOCAL_CHROOT/etc/mtab 2>/dev/null
 	umount $LOCAL_CHROOT
 	if [ $?==0 ]
 	then
@@ -255,6 +263,10 @@ do
 		"--clean")
 			CLEAN=1
 			ACTION=$(expr $ACTION + 1)
+			;;
+		"--name")
+			shift
+			LOCAL_IMG=$1
 			;;
 		"--help")
 			show_help
