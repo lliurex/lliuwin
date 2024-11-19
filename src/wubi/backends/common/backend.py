@@ -437,6 +437,9 @@ class Backend(object):
              downloader.download,
              is_required = True)
         dimage_path = download(url, save_as, web_proxy=self.info.web_proxy)
+        log.debug("DIMAGE_PATH %s"%dimage_path)
+        log.debug("DIMAGE_PATH was %s"%self.dimage_path)
+        log.debug("DIMAGE_PATH was also %s"%self.info.dimage_path)
         if dimage_path:
             self.info.dimage_path = dimage_path
             return True
