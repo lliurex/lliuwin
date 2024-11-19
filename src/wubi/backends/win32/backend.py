@@ -438,12 +438,14 @@ class WindowsBackend(Backend):
 
     def extract_diskimage(self, associated_task=None):
         # TODO: try to pipe download stream into this.
-        if self.dimage_path.endswith(".xz"):
+        log.debug("  DIMAGE %s" % (self.dimage_path))
+        log.debug("  INFO DIMAGE %s" % (self.info.dimage_path))
+        if self.info.dimage_path.endswith(".xz"):
             sevenzip = self.info.iso_extractor
-            xz = self.dimage_path
+            xz = self.info.dimage_path
             log.debug("  extracting %s" % (xz))
             log.debug("  target dir %s" % (self.info.disks_dir))
-            tarball = os.path.basename(self.dimage_path).strip('.xz')
+            tarball = os.path.basename(self.info.dimage_path).strip('.xz')
             # 7-zip needs 7z.dll to read the xz format.
             dec_xz = [sevenzip, 'e', '-i!' + tarball, '-so', xz]
             dec_tar = [sevenzip, 'e', '-si', '-ttar', '-o' + self.info.disks_dir]
