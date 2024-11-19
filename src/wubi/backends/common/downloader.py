@@ -71,12 +71,13 @@ def download(url, filename=None, associated_task=None, web_proxy = None):
         reget = 'simple',
         proxies = web_proxy,
         progress_obj = progress_obj)
+    basename = os.path.basename(url)
     if os.path.isdir(filename):
-        basename = os.path.basename(url)
         filename = os.path.join(filename, basename)
     try:
         filename = urlgrabber.urlgrab(url, filename=filename)
-    except:
-        filename = os.path.join(filename, basename)
+    except Exception as e:
+    	log.debug("ERROR downloading %s > %s" % (url, str(e)))
+        #filename = os.path.join(filename, basename)
     return filename
 
