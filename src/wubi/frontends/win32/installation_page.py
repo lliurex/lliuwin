@@ -115,7 +115,7 @@ class InstallationPage(Page):
         target_drive = self.get_drive()
         self.size_list_gb = []
         self.size_list.clear()
-        i_size_list = list(range(16, 65,16)) +list(range(96,257,32)) + list(range(384,1025,128))
+        i_size_list = list(range(16, 33,8)) + list(range(48, 65,16)) +list(range(96,257,32)) + list(range(384,1025,128))
         if self.info.installation_size_mb:
             i = int(self.info.installation_size_mb/1000)
             if i not in i_size_list:
@@ -125,11 +125,13 @@ class InstallationPage(Page):
             #~ log.debug("%s < %s and %s > %s" % (i * 1000 + self.info.distro.max_iso_size/1024**2 + 100 , target_drive.free_space_mb, i * 1000 , self.info.distro.min_disk_space_mb))
             if self.info.skip_size_check \
             or i * 1000 >= self.info.distro.min_disk_space_mb: #use 1000 as it is more conservative
-                if i * 1000 + self.info.distro.max_iso_size/1024**2 + 100 <= target_drive.free_space_mb:
+                if i * 1000 + self.info.distro.max_iso_size/1024**2 + 100 <= (target_drive.free_space_mb)-16000: #16gb=reserved for img download and manipulation
                     self.size_list_gb.append(i)
                     self.size_list.add_item("%sGB" % i)
-        self.size_list_gb.append(int(target_drive.free_space_mb/1024))
-        self.size_list.add_item("%sGB" % int(target_drive.free_space_mb/1024))
+        fullDisk=int(target_drive.free_space_mb/1000)-16
+        if fullDisk not in self.size_list_gb:
+            self.size_list_gb.append(fullDisk)
+        self.size_list.add_item("%sGB" % fullDisk)
         self.select_default_size()
 
     def select_default_size(self):
