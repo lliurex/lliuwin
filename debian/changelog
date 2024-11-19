@@ -1,3 +1,7 @@
+lliuwin (23.04.01r001) jammy; urgency=medium
+  * Update artwork
+  * Reserve 16G of free space for image manipulation
+
 lliuwin (23.01.23r001) jammy; urgency=medium
 
   * Jammy release. 
