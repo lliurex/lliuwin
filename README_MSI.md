@@ -29,6 +29,7 @@ BUILD=./build
 #Options for make command
 MAKEOPTS=""
 ```
+## NOTE
 As 2023-11-27 msi-packager from npm contains a critcal bug and fails:
 '''
 TypeError [ERR_INVALID_CALLBACK]: Callback must be a function. Received undefined
