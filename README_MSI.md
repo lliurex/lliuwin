@@ -1,10 +1,34 @@
 After lliuwin is compiled a *msi package-installer must be populated.
 The shell __generate_msi.sh__ populates one automatically. 
 
-REQUIREMENTS:
+##REQUIREMENTS
  - apt-get install msitools wixl
  - sudo npm install -global msi-packager
 
+##USAGE
+As simply as
+```
+./generate_msi.sh
+```
+
+##CUSTOMIZATION
+Some values could be configured from the script itself:
+```
+#Package release
+VERSION:"23.01"
+#Developer info
+DEVEL="Lliurex Team"
+#Target arch
+ARCH="x64"
+#Output dir
+DIST=./dist
+#MSI path
+MSI=${DIST}/lliuwin_installer_${ARCH}.msi
+#Build dir
+BUILD=./build
+#Options for make command
+MAKEOPTS=""
+```
 As 2023-11-27 msi-packager from npm contains a critcal bug and fails:
 '''
 TypeError [ERR_INVALID_CALLBACK]: Callback must be a function. Received undefined
