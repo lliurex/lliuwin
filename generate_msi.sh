@@ -1,14 +1,18 @@
 #!/bin/bash
+
+#Don't touch ->
 PROJECT="LliuWin"
-VERSION="23.01"
-DEVEL="LliureX Team"
 ARCH="x64"
 UPID="00112232-GNUX-LL00-1907-019283746547"
+EXE=lliuwin.exe
+#<-
+
+VERSION=$(head debian/changelog -n1 | grep -o "[0-9][0-9]\.[0-9]*")
+DEVEL="LliureX Team"
 DIST=./dist
 MSI=${DIST}/lliuwin_installer_x64.msi
 ICO=./data/images/lliuwin.ico
 BUILD=./build
-EXE=lliuwin.exe
 MAKEOPTS=""
 
 function build
