@@ -6,7 +6,7 @@
 LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
 LOCAL_IMG=/home/${SUDO_USER}/lliurex23-latest-lliuwin.img
 SIZE=11G
-RELEASE=jammy
+RELEASE=$(lsb_release -s --codename)
 LLIUREX_META=lliurex-meta-desktop-lite
 EXTRA_PACKAGES="linux-firmware lliuwin-wizard rebost-gui"
 UBUNTU_PACKAGES="zram-config"
