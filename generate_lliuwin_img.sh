@@ -4,7 +4,7 @@
 #This script attempts to create a lliurex system inside a ext4 image
 
 LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
-LOCAL_IMG=/home/${SUDO_USER}/lliuwin2.img
+LOCAL_IMG=/home/${SUDO_USER}/lliurex23-latest-lliuwin.img
 SIZE=11G
 RELEASE=jammy
 LLIUREX_META=lliurex-meta-desktop-lite
