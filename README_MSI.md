@@ -1,17 +1,17 @@
 After lliuwin is compiled a *msi package-installer must be populated.
 The shell __generate_msi.sh__ populates one automatically. 
 
-##REQUIREMENTS
+## REQUIREMENTS
  - apt-get install msitools wixl
  - sudo npm install -global msi-packager
 
-##USAGE
+## USAGE
 As simply as
 ```
 ./generate_msi.sh
 ```
 
-##CUSTOMIZATION
+## CUSTOMIZATION
 Some values could be configured from the script itself:
 ```
 #Package release
