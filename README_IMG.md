@@ -23,12 +23,20 @@ The shell __generate_lliuwin_img.sh__ does this in an automated way.
 Some values may be adjusted editing the shell. There're no parms for them.
 
 ```
-LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot #-> Manages the chroot location
-LLX_RELEASE=$(lliurex-version -n | cut -d "." -f1) #-> Release (major)
-LOCAL_IMG=/home/${SUDO_USER}/lliurex${LLX_RELEASE}-latest-lliuwin.img #-> Image path
-SIZE=11G #-> Desired size for the image
-RELEASE=$(lsb_release -s --codename) #-> Release (one of jammy|focal|noble...)
-LLIUREX_META=lliurex-meta-desktop-lite #-> Meta package for the rootfs
-EXTRA_PACKAGES="linux-firmware lliuwin-wizard rebost-gui" #-> Required packages
-UBUNTU_PACKAGES="zram-config" #-> Required packages from Ubuntu
+#Manages the chroot location
+LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
+#Release (major)
+LLX_RELEASE=$(lliurex-version -n | cut -d "." -f1)
+#Full image path
+LOCAL_IMG=/home/${SUDO_USER}/lliurex${LLX_RELEASE}-latest-lliuwin.img 
+#Desired size for the image
+SIZE=11G
+#Release (one of jammy|focal|noble...)
+RELEASE=$(lsb_release -s --codename)
+#Meta package for the rootfs
+LLIUREX_META=lliurex-meta-desktop-lite
+#Required packages
+EXTRA_PACKAGES="linux-firmware lliuwin-wizard rebost-gui" 
+#Required packages from Ubuntu
+UBUNTU_PACKAGES="zram-config" 
 ```
