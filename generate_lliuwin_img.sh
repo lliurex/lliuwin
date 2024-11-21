@@ -6,7 +6,7 @@
 LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
 LLX_RELEASE=$(lliurex-version -n | cut -d "." -f1)
 LOCAL_IMG=/home/${SUDO_USER}/lliurex${LLX_RELEASE}-latest-lliuwin.img
-SIZE=11G
+SIZE=12G
 RELEASE=$(lsb_release -s --codename)
 LLIUREX_META=lliurex-meta-desktop-lite
 EXTRA_PACKAGES="linux-firmware lliuwin-wizard rebost-gui"
