@@ -172,12 +172,12 @@ function umount_img()
 
 function allocate_img()
 {
-	echo "Populating $LOCAL_IMG"
 	if [ -n $SIZE ] && [ "$SIZE" -eq "$SIZE" 2>/dev/null ] 
 	then
 		SIZE="${SIZE}G"
 	fi
-	
+	echo "Populating $LOCAL_IMG (size $SIZE)"
+	[ -e $LOCAL_IMG ] && rm -f $LOCAL_IMG
 	fallocate -l $SIZE $LOCAL_IMG
 	echo "Formatting"
 	mkfs.ext4 $LOCAL_IMG
@@ -228,7 +228,8 @@ do
 			;;
 		"--allocate")
 			ALLOCATE=1
-			ACTION=$(expr $ACTION + 1)
+			shift
+			SIZE=$1
 			;;
 		"--mount")
 			MOUNT=1
