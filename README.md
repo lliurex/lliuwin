@@ -1,5 +1,12 @@
 # LLiuWin
 
+## IMPORTANT
+
+Bitlocker protected drives are not capable of booting LliuWin. The only available options are: 
+
+- Install to a non-protected partition or disk
+- Disable bitlocker protection
+
 
 ## Introduction
 
