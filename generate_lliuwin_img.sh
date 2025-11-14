@@ -6,10 +6,10 @@
 LOCAL_CHROOT=/home/${SUDO_USER}/lliuwin_chroot
 LLX_RELEASE=$(lliurex-version -n | cut -d "." -f1)
 LOCAL_IMG=/home/${SUDO_USER}/lliurex${LLX_RELEASE}-latest-lliuwin.img
-SIZE=12G
+SIZE=13G
 RELEASE=$(lsb_release -s --codename)
 LLIUREX_META=lliurex-meta-home-desktop
-EXTRA_PACKAGES="linux-firmware lliuwin-wizard rebost-gui"
+EXTRA_PACKAGES="linux-firmware lliuwin-wizard dconf-cli"
 UBUNTU_PACKAGES="zram-config"
 
 function show_help()
@@ -127,7 +127,7 @@ function install_meta()
 	apt-get update
 	dpkg --configure -a
 	apt clean
-	apt-get install -y $LLIUREX_META
+	apt-get install -y $LLIUREX_META || exit 1
 	apt-get install -f -y
 	apt clean
 	lliurex-upgrade -u
@@ -161,6 +161,8 @@ function umount_img()
 	rm $LOCAL_CHROOT/root/var/cache/apt/archives/* 2>/dev/null
 	rm -r $LOCAL_CHROOT/tmp/* 2>/dev/null
 	rm $LOCAL_CHROOT/etc/mtab 2>/dev/null
+	#Lliurex>=25 use DEB822 for sources, delete the old
+	[[ -e $LOCAL_CHROOT/etc/apt/sources.list.d/lliurex.sources ]] && rm -v $LOCAL_CHROOT/etc/apt/sources.list 2>/dev/null
 	umount $LOCAL_CHROOT
 	if [ $?==0 ]
 	then
