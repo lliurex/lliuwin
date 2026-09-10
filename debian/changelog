@@ -1,6 +1,15 @@
+lliuwin (25.04.01) noble; urgency=medium
+
+  * LliureX 25 release 
+
+ -- Juanma1980 <juanma1980@gmail.com>  Thu, 10 Sep 2026 19:16:52 +0200
+
 lliuwin (23.04.01r001) jammy; urgency=medium
+
   * Update artwork
   * Reserve 16G of free space for image manipulation
+
+ -- Juanma1980 <juanma1980@gmail.com>  Tue, 07 Nov 2023 09:45:32 +0100
 
 lliuwin (23.01.23r001) jammy; urgency=medium
 
