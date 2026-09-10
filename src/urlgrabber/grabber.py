@@ -793,6 +793,7 @@ class URLGrabberOptions:
         self.close_connection = 0
         self.range = None
         self.user_agent = 'urlgrabber/%s' % __version__
+        self.user_agent = 'mozilla/%s' % __version__
         self.keepalive = 1
         self.proxies = None
         self.reget = None
